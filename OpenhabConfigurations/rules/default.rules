@@ -1,0 +1,615 @@
+import org.openhab.core.library.types.*
+import org.openhab.core.persistence.*
+import org.openhab.model.script.actions.*
+import org.joda.time.*
+
+// Value to customize
+var int OpenWindowDeltaTemp = 3
+var int  OpenWindowDeltaTime = 10
+
+var int AutoStartAMInit = 5
+var int AutoStopAMInit = 9
+var int AutoStartPMInit = 18
+var int AutoStopPMInit = 23
+
+var int TempTargetedSalonInit = 200
+var int TempTargetedChambreInit = 190
+var int TempTargetedBureauInit = 190
+
+//Initialization
+var String SalonModeChauff = "UNKNOWN"
+var String ChambreModeChauff = "UNKNOWN"
+var String BureauModeChauff = "UNKNOWN"
+var String SdbModeChauff = "UNKNOWN"
+var String SdbBalModeChauff = "UNKNOWN"
+var int HeaterTime = 0
+
+val org.eclipse.xtext.xbase.lib.Functions$Function6 TempSensorChanged = [
+    org.openhab.core.library.items.SwitchItem TempSwitch,
+    org.openhab.core.library.items.NumberItem  TempSensor,
+    String ModeChauff,
+    org.openhab.core.library.items.NumberItem TempTargeted, int HeaterTime, String LogName |
+    
+    var Number nTempTargeted = 0
+    if(TempTargeted.state instanceof DecimalType) nTempTargeted = TempTargeted.state as DecimalType 
+     
+	if (ModeChauff == "UNKNOWN") {
+		logWarn(LogName, "We don't know the state so do nothing")
+	} else if (ModeChauff == "OFF") {
+		logInfo(LogName, "Heater is force to OFF")
+		sendCommand(TempSwitch,"OFF")
+	} else if (ModeChauff == "ON") {
+		logInfo(LogName, "Heater is force to ON")
+		sendCommand(TempSwitch,"ON")
+	} else if (ModeChauff == "CONF") {
+		if (TempSensor.state <= ((nTempTargeted/10) - 0.25)) {
+			logInfo(LogName, "The temperature ("+TempSensor.state+") is bellow " + ((nTempTargeted/10) - 0.25) + ". Let's turn ON")
+			sendCommand(TempSwitch,"ON")
+		} else if (TempSensor.state >= ((nTempTargeted/10) + 0.25)) {
+			logInfo(LogName, "The temperature ("+TempSensor.state+") is upper " + ((nTempTargeted/10) + 0.25) + ". Let's turn OFF")
+			sendCommand(TempSwitch,"OFF")
+		} else {
+			logInfo(LogName, "The temperature ("+TempSensor.state+") is around " + (nTempTargeted/10) + ". Let's wait and see")
+		}
+	} else if (ModeChauff == "AUTO"){
+	    var boolean SomeoneIn = false
+	    var Number MaxMoveSensor = SalonMoveSensor.maximumSince(now.minusHours(3)).state as DecimalType
+	    if (MaxMoveSensor == 1) {
+	    	SomeoneIn = true;
+	    }
+	
+		if ((HeaterTime == 2) || ((HeaterTime == 3) && SomeoneIn)) {
+			if (TempSensor.state <= ((nTempTargeted/10) - 0.25)) {
+				logInfo(LogName, "The temperature ("+TempSensor.state+") is bellow " + ((nTempTargeted/10) - 0.25) + ", TimeRule="+HeaterTime+", PresenceRule="+SomeoneIn+". Let's turn ON")
+				sendCommand(TempSwitch,"ON")
+			} else if (TempSensor.state >= ((nTempTargeted/10) + 0.25)) {
+				logInfo(LogName, "The temperature ("+TempSensor.state+") is upper " + ((nTempTargeted/10) + 0.25) + ", TimeRule="+HeaterTime+", PresenceRule="+SomeoneIn+". Let's turn OFF")
+				sendCommand(TempSwitch,"OFF")
+			} else {
+				logInfo(LogName, "The temperature ("+TempSensor.state+") is around " + (nTempTargeted/10) + ", TimeRule="+HeaterTime+", PresenceRule="+SomeoneIn+". Let's wait and see")
+			}
+		} else {
+			logInfo(LogName, "Lets turn OFF. TimeRule="+HeaterTime+", PresenceRule="+SomeoneIn)
+			sendCommand(TempSwitch,"OFF")					
+		}
+	} else {
+		logWarn(LogName, "We are in state that we don't handle: "+ModeChauff)			
+	}			
+]
+
+val org.eclipse.xtext.xbase.lib.Functions$Function4 SimpleChange = [
+    org.openhab.core.library.items.SwitchItem TempSwitch,
+    String ModeChauff, int HeaterTime, String LogName |
+     
+	if (ModeChauff == "UNKNOWN") {
+		logWarn(LogName, "We don't know the state so do nothing")
+	} else if (ModeChauff == "OFF") {
+		logInfo(LogName, "Heater is force to OFF")
+		sendCommand(TempSwitch,"OFF")
+	} else if (ModeChauff == "ON") {
+		logInfo(LogName, "Heater is force to ON")
+		sendCommand(TempSwitch,"ON")
+	} else {
+		logWarn(LogName, "We are in state that we don't handle: "+ModeChauff)			
+	}			
+]
+
+rule "Initialize the system"
+	when 
+		System started
+	then
+		if (SalonRadModeSwitch.previousState != null) {
+			postUpdate(SalonRadModeSwitch, SalonRadModeSwitch.previousState.getState())
+		}
+		switch(SalonRadModeSwitch.state) {
+			case 0 : SalonModeChauff = "OFF"
+			case 1 : SalonModeChauff = "ON"
+			case 2 : SalonModeChauff = "CONF"
+			case 3 : SalonModeChauff = "AUTO"
+			default: SalonModeChauff = "OFF"
+		}
+		logInfo("TempManagerSalon", "Initialize the mode to " + SalonModeChauff)
+		
+		if (ChambreRadModeSwitch.previousState != null) {
+			postUpdate(ChambreRadModeSwitch, ChambreRadModeSwitch.previousState.getState())	
+		}
+		switch(ChambreRadModeSwitch.state) {
+			case 0 : ChambreModeChauff = "OFF"
+			case 1 : ChambreModeChauff = "ON"
+			case 2 : ChambreModeChauff = "CONF"
+			case 3 : ChambreModeChauff = "AUTO"
+			default: ChambreModeChauff = "OFF"
+		}
+		logInfo("TempManagerChambre", "Initialize the mode to " + ChambreModeChauff)
+		
+		if (BureauRadModeSwitch.previousState != null) {
+			postUpdate(BureauRadModeSwitch, BureauRadModeSwitch.previousState.getState())	
+		}
+		switch(BureauRadModeSwitch.state) {
+			case 0 : BureauModeChauff = "OFF"
+			case 1 : BureauModeChauff = "ON"
+			case 2 : BureauModeChauff = "CONF"
+			case 3 : BureauModeChauff = "AUTO"
+			default: BureauModeChauff = "OFF"
+		}
+		logInfo("TempManagerBureau", "Initialize the mode to " + BureauModeChauff)
+		
+		if (SdbRadModeSwitch.previousState != null) {
+			postUpdate(SdbRadModeSwitch, SdbRadModeSwitch.previousState.getState())	
+		}
+		switch(SdbRadModeSwitch.state) {
+			case 0 : SdbModeChauff = "OFF"
+			case 1 : SdbModeChauff = "ON"
+			case 2 : SdbModeChauff = "CONF"
+			case 3 : SdbModeChauff = "AUTO"
+			default: SdbModeChauff = "OFF"
+		}
+		logInfo("TempManagerSdb", "Initialize the mode to " + SdbModeChauff)
+		
+		if (SdbBalModeSwitch.previousState != null) {
+			postUpdate(SdbBalModeSwitch, SdbBalModeSwitch.previousState.getState())	
+		}
+		switch(SdbBalModeSwitch.state) {
+			case 0 : SdbBalModeChauff = "OFF"
+			case 1 : SdbBalModeChauff = "ON"
+			case 2 : SdbBalModeChauff = "CONF"
+			case 3 : SdbBalModeChauff = "AUTO"
+			default: SdbBalModeChauff = "OFF"
+		}
+		logInfo("TempManagerSdbBal", "Initialize the mode to " + SdbBalModeChauff)
+		
+		
+		if (TargetedTempSalon.previousState != null) {
+			postUpdate(TargetedTempSalon, TargetedTempSalon.previousState.getState())
+		} else {
+			postUpdate(TargetedTempSalon, TempTargetedSalonInit)
+		}
+		logInfo("TempManagerBureau", "Initialize Temperature salon " + TargetedTempSalon.state)
+		if (TargetedTempChambre.previousState != null) {
+			postUpdate(TargetedTempChambre, TargetedTempChambre.previousState.getState())
+		} else {
+			postUpdate(TargetedTempChambre, TempTargetedChambreInit)
+		}
+		logInfo("TempManagerBureau", "Initialize Temperature chambre " + TargetedTempChambre.state)
+		if (TargetedTempBureau.previousState != null) {
+			postUpdate(TargetedTempBureau, TargetedTempBureau.previousState.getState())
+		} else {
+			postUpdate(TargetedTempBureau, TempTargetedBureauInit)
+		}
+		logInfo("TempManagerBureau", "Initialize Temperature bureau " + TargetedTempBureau.state)
+		
+		
+		if(AutoStartAM.previousState != null) {postUpdate(AutoStartAM, AutoStartAM.previousState.getState())} else {postUpdate(AutoStartAM, AutoStartAMInit)}      
+		logInfo("TempManagerBureau", "Initialize Start AM " + AutoStartAM.state)
+		if(AutoStopAM.previousState != null) {postUpdate(AutoStopAM, AutoStopAM.previousState.getState())} else {postUpdate(AutoStopAM, AutoStopAMInit)}      
+		logInfo("TempManagerBureau", "Initialize Stop AM " + AutoStopAM.state)
+		if(AutoStartPM.previousState != null) {postUpdate(AutoStartPM, AutoStartPM.previousState.getState())} else {postUpdate(AutoStartPM, AutoStartPMInit)}      
+		logInfo("TempManagerBureau", "Initialize Start PM " + AutoStartPM.state)
+		if(AutoStopPM.previousState != null) {postUpdate(AutoStopPM, AutoStopPM.previousState.getState())} else {postUpdate(AutoStopPM, AutoStopPMInit)}      	
+		logInfo("TempManagerBureau", "Initialize Stop PM " + AutoStopPM.state)
+		
+		
+		///////////////////// JUST A COPY OF THE TIME RULE
+       	// Prepare the timer
+        var int nAutoStartAM
+        var int nAutoStopAM
+        var int nAutoStartPM
+        var int nAutoStopPM
+		if(AutoStartAM.state instanceof DecimalType) {nAutoStartAM = (AutoStartAM.state as DecimalType).intValue()} else {nAutoStartAM = AutoStartAMInit}      
+        if(AutoStopAM.state instanceof DecimalType) {nAutoStopAM = (AutoStopAM.state as DecimalType).intValue()} else {nAutoStopAM = AutoStopAMInit}        
+        if(AutoStartPM.state instanceof DecimalType) {nAutoStartPM = (AutoStartPM.state as DecimalType).intValue()} else {nAutoStartPM = AutoStartPMInit}   
+        if(AutoStopPM.state instanceof DecimalType) {nAutoStopPM = (AutoStopPM.state as DecimalType).intValue()} else {nAutoStopPM = AutoStopPMInit} 
+         
+        var DateTime StartTimeAM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
+        StartTimeAM = StartTimeAM.plusHours(nAutoStartAM)
+        var DateTime EndTimeAM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
+        EndTimeAM = EndTimeAM.plusHours(nAutoStopAM)
+        var DateTime StartTimePM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
+        StartTimePM = StartTimePM.plusHours(nAutoStartPM)
+        var DateTime EndTimePM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
+        EndTimePM = EndTimePM.plusHours(nAutoStopPM)
+        
+		// Detect which time slot we are right now
+        if (EndTimePM.beforeNow) {
+			logInfo("AutoManager", "It's super late.")
+        	HeaterTime = 1       
+        } else if (StartTimePM.beforeNow && EndTimePM.afterNow) {
+			logInfo("AutoManager", "It's evening.")
+        	HeaterTime = 2        	
+        } else if (EndTimeAM.beforeNow && StartTimePM.afterNow) {
+			logInfo("AutoManager", "It's after noon.")
+    		HeaterTime = 3             	
+        } else if (StartTimeAM.beforeNow && EndTimeAM.afterNow) {
+			logInfo("AutoManager", "It's morning.")
+        	HeaterTime = 2        	
+        } else if (StartTimeAM.afterNow) {
+			logInfo("AutoManager", "It's super early.")
+        	HeaterTime = 1 	
+        } else {
+			logWarn("AutoManager", "Can't found the current hour action")
+        }
+		//////////////////////////////////////////////////
+		
+		TempSensorChanged.apply(SalonTempSwitch, SalonTempSensor, SalonModeChauff, TargetedTempSalon, HeaterTime, "TempManagerSalon")
+		TempSensorChanged.apply(ChambreTempSwitch, ChambreTempSensor, ChambreModeChauff, TargetedTempChambre, HeaterTime, "TempManagerChambre")
+		TempSensorChanged.apply(BureauTempSwitch, BureauTempSensor, BureauModeChauff, TargetedTempBureau, HeaterTime, "TempManagerBureau")
+		SimpleChange.apply(SdbTempSwitch, SdbModeChauff, HeaterTime, "TempManagerSdb")
+		SimpleChange.apply(SdbBalSwitch, SdbBalModeChauff, HeaterTime, "TempManagerSdbBal")
+		
+end
+
+rule "Temperature Salon change"
+	when
+		Item SalonTempSensor changed
+	then
+		if (SalonTempSensor.deltaSince(now.minusMinutes(OpenWindowDeltaTime)) > OpenWindowDeltaTemp) {
+			logWarn("TempManagerSalon", "Temperature changed more than "+ OpenWindowDeltaTemp +" C in "+OpenWindowDeltaTime+" mins. Stop heater")
+			sendCommand(SalonTempSwitch,"OFF")
+		} else {
+			TempSensorChanged.apply(SalonTempSwitch, SalonTempSensor, SalonModeChauff, TargetedTempSalon, HeaterTime, "TempManagerSalon")
+		}
+end
+
+rule "Temperature Chambre change"
+	when
+		Item ChambreTempSensor changed
+	then
+		if (ChambreTempSensor.deltaSince(now.minusMinutes(OpenWindowDeltaTime)) > OpenWindowDeltaTemp) {
+			logWarn("TempManagerChambre", "Temperature changed more than "+ OpenWindowDeltaTemp +" C in "+OpenWindowDeltaTime+" mins. Stop heater")
+			sendCommand(ChambreTempSwitch,"OFF")
+		} else {
+			TempSensorChanged.apply(ChambreTempSwitch, ChambreTempSensor, ChambreModeChauff, TargetedTempChambre, HeaterTime, "TempManagerChambre")
+		}
+end
+
+rule "Temperature Bureau change"
+	when
+		Item BureauTempSensor changed
+	then
+		if (BureauTempSensor.deltaSince(now.minusMinutes(OpenWindowDeltaTime)) > OpenWindowDeltaTemp) {
+			logWarn("TempManagerBureau", "Temperature changed more than "+ OpenWindowDeltaTemp +" C in "+OpenWindowDeltaTime+" mins. Stop heater")
+			sendCommand(BureauTempSwitch,"OFF")
+		} else {
+			TempSensorChanged.apply(BureauTempSwitch, BureauTempSensor, BureauModeChauff, TargetedTempBureau, HeaterTime, "TempManagerBureau")
+		}
+end
+
+rule "Mode Chauffage Salon"
+	when
+		Item SalonRadModeSwitch received command
+	then
+		switch(receivedCommand) {
+			case 0 : SalonModeChauff = "OFF"
+			case 1 : SalonModeChauff = "ON"
+			case 2 : SalonModeChauff = "CONF"
+			case 3 : SalonModeChauff = "AUTO"
+		}
+		logInfo("TempManagerSalon", "We moved the mode to " + SalonModeChauff+". Temp is " + SalonTempSensor.state)
+		TempSensorChanged.apply(SalonTempSwitch, SalonTempSensor, SalonModeChauff, TargetedTempSalon, HeaterTime, "TempManagerSalon")
+end
+
+rule "Mode Chauffage Chambre"
+	when
+		Item ChambreRadModeSwitch received command
+	then
+		switch(receivedCommand) {
+			case 0 : ChambreModeChauff = "OFF"
+			case 1 : ChambreModeChauff = "ON"
+			case 2 : ChambreModeChauff = "CONF"
+			case 3 : ChambreModeChauff = "AUTO"
+		}
+		logInfo("TempManagerChambre", "We moved the mode to " + ChambreModeChauff+". Temp is " + ChambreTempSensor.state)
+		TempSensorChanged.apply(ChambreTempSwitch, ChambreTempSensor, ChambreModeChauff, TargetedTempChambre, HeaterTime, "TempManagerChambre")
+		
+end
+
+rule "Mode Chauffage Bureau"
+	when
+		Item BureauRadModeSwitch received command
+	then
+		switch(receivedCommand) {
+			case 0 : BureauModeChauff = "OFF"
+			case 1 : BureauModeChauff = "ON"
+			case 2 : BureauModeChauff = "CONF"
+			case 3 : BureauModeChauff = "AUTO"
+		}
+		logInfo("TempManagerBureau", "We moved the mode to " + BureauModeChauff+". Temp is " + BureauTempSensor.state)
+		TempSensorChanged.apply(BureauTempSwitch, BureauTempSensor, BureauModeChauff, TargetedTempBureau, HeaterTime, "TempManagerBureau")
+		
+end
+
+rule "Mode Chauffage Sdb"
+	when
+		Item SdbRadModeSwitch received command
+	then
+		switch(receivedCommand) {
+			case 0 : SdbModeChauff = "OFF"
+			case 1 : SdbModeChauff = "ON"
+			case 2 : SdbModeChauff = "CONF"
+			case 3 : SdbModeChauff = "AUTO"
+		}
+		logInfo("TempManagerSdb", "We moved the mode to " + SdbModeChauff+".")
+		SimpleChange.apply(SdbTempSwitch, SdbModeChauff, HeaterTime, "TempManagerSdb")
+		
+end
+
+rule "Mode Chauffage Ballon Eau chaude"
+	when
+		Item SdbBalModeSwitch received command
+	then
+		switch(receivedCommand) {
+			case 0 : SdbBalModeChauff = "OFF"
+			case 1 : SdbBalModeChauff = "ON"
+			case 2 : SdbBalModeChauff = "CONF"
+			case 3 : SdbBalModeChauff = "AUTO"
+		}
+		logInfo("TempManagerSdbBal", "We moved the mode to " + SdbBalModeChauff+".")
+		SimpleChange.apply(SdbBalSwitch, SdbBalModeChauff, HeaterTime, "TempManagerSdbBal")
+		
+end
+
+rule "Check the time it's now"
+    when
+        Time cron "0 0/5 * * * ?"
+    then
+        var int nAutoStartAM
+        var int nAutoStopAM
+        var int nAutoStartPM
+        var int nAutoStopPM
+		if(AutoStartAM.state instanceof DecimalType) {nAutoStartAM = (AutoStartAM.state as DecimalType).intValue()} else {nAutoStartAM = AutoStartAMInit}      
+        if(AutoStopAM.state instanceof DecimalType) {nAutoStopAM = (AutoStopAM.state as DecimalType).intValue()} else {nAutoStopAM = AutoStopAMInit}        
+        if(AutoStartPM.state instanceof DecimalType) {nAutoStartPM = (AutoStartPM.state as DecimalType).intValue()} else {nAutoStartPM = AutoStartPMInit}   
+        if(AutoStopPM.state instanceof DecimalType) {nAutoStopPM = (AutoStopPM.state as DecimalType).intValue()} else {nAutoStopPM = AutoStopPMInit} 
+         
+        var DateTime StartTimeAM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
+        StartTimeAM = StartTimeAM.plusHours(nAutoStartAM)
+        var DateTime EndTimeAM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
+        EndTimeAM = EndTimeAM.plusHours(nAutoStopAM)
+        var DateTime StartTimePM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
+        StartTimePM = StartTimePM.plusHours(nAutoStartPM)
+        var DateTime EndTimePM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
+        EndTimePM = EndTimePM.plusHours(nAutoStopPM)
+        
+		// Detect which time slot we are right now
+        if (EndTimePM.beforeNow) {
+			logInfo("AutoManager", "It's super late.")
+        	HeaterTime = 1       
+        } else if (StartTimePM.beforeNow && EndTimePM.afterNow) {
+			logInfo("AutoManager", "It's evening.")
+        	HeaterTime = 2        	
+        } else if (EndTimeAM.beforeNow && StartTimePM.afterNow) {
+			logInfo("AutoManager", "It's after noon.")
+    		HeaterTime = 3             	
+        } else if (StartTimeAM.beforeNow && EndTimeAM.afterNow) {
+			logInfo("AutoManager", "It's morning.")
+        	HeaterTime = 2        	
+        } else if (StartTimeAM.afterNow) {
+			logInfo("AutoManager", "It's super early.")
+        	HeaterTime = 1 	
+        } else {
+			logWarn("AutoManager", "Can't found the current hour action")
+        }
+end
+
+rule "Check the daily conso"
+    when
+        Time cron "0 0 0 * * ?"
+    then
+    	AppartHPConso.postUpdate(AppartHPSensor.deltaSince(now.minusHours(24)))
+		AppartHCConso.postUpdate(AppartHCSensor.deltaSince(now.minusHours(24)))
+end
+
+rule "Records last weather update time"
+when
+  Item Weather_Temperatureopenweather received update
+then
+  postUpdate(Weather_LastUpdateopenweather, new DateTimeType())
+end
+
+rule "Records last weather update time"
+when
+  Item Weather_TemperatureWunderground received update
+then
+  postUpdate(Weather_LastUpdateWunderground, new DateTimeType())
+end
+
+/* 
+ * 
+ * receivedCommand
+
+
+/*
+rule "Initialize heating states"
+	when 
+		System started
+	then
+		Heating?.members.forEach(heating|
+			postUpdate(heating, if(Math::random > 0.8) ON else OFF)
+		)
+		postUpdate(Temperature_Setpoint, 22)
+end
+* 
+* 
+ 
+var Number counter = 1
+var Timer timer = null
+
+/**
+ * This is a demo rule which simulates a real dimmer by reacting to increase/decrease commands 
+ * and posting an updated state on the bus 
+
+rule "Dimmed Light"
+	when
+		Item DimmedLight received command
+	then
+		var Number percent = 0
+		if(DimmedLight.state instanceof DecimalType) percent = DimmedLight.state as DecimalType 
+			
+		if(receivedCommand==INCREASE) percent = percent + 5
+		if(receivedCommand==DECREASE) percent = percent - 5
+
+		if(percent<0)   percent = 0
+		if(percent>100) percent = 100
+		postUpdate(DimmedLight, percent);
+end
+
+/**
+ * This rule demonstrates how a NumberItem can be used to easily control the local sound system.
+ * A selection widget in the UI provides easy access for this
+
+rule "Select Radio Station"
+	when
+		Item Radio_Station received command
+	then
+		switch(receivedCommand) {
+			case 0 : playStream(null)
+			case 1 : playStream("http://metafiles.gl-systemhaus.de/hr/hr3_2.m3u")
+			case 2 : playStream("http://mp3-live.swr3.de/swr3_m.m3u")
+			case 3 : playStream("http://edge.live.mp3.mdn.newmedia.nacamar.net/radioffh/livestream.mp3.m3u")
+		}
+end
+
+/**
+ * This rules controls the volume on the local host
+
+rule "Volume control"
+	when
+		Item Volume received command
+	then
+		if(receivedCommand instanceof PercentType) {
+			setMasterVolume(receivedCommand as PercentType)
+		} else {
+			if(receivedCommand==INCREASE) increaseMasterVolume(20)
+			if(receivedCommand==DECREASE) decreaseMasterVolume(20)	
+		}
+		postUpdate(Volume, masterVolume * 100)
+end
+
+/**
+ * The following rules help initializing the demo items with some helpful states.
+
+rule "Initialize light states"
+	when
+		System started
+	then
+		Lights?.members.forEach(light|
+			postUpdate(light, if(Math::random > 0.7) ON else OFF)
+		)
+end
+
+rule "Initialize heating states"
+	when 
+		System started
+	then
+		Heating?.members.forEach(heating|
+			postUpdate(heating, if(Math::random > 0.8) ON else OFF)
+		)
+		postUpdate(Temperature_Setpoint, 22)
+end
+
+rule "Initialize contact states"
+	when 
+		System started
+	then
+		Windows?.members.forEach(window|
+			postUpdate(window, if(Math::random > 0.5) OPEN else CLOSED)
+		)
+end
+
+rule "Initialize Location"
+	when 
+		System started
+	then
+		DemoLocation.postUpdate(new PointType("52.5200066,13.4049540"))
+end
+
+rule "Set random room temperatures"
+	when 
+		System started or
+		Time cron "0 0/5 * * * ?"
+	then
+		Temperature?.members.forEach(temperature|
+			postUpdate(temperature, 20.0 + (25.0 - (Math::random * 50.0).intValue) / 10.0)
+		)
+end
+
+rule "Update max and min temperatures"
+when
+	Item Weather_Temperature changed or
+	Time cron "0 0 0 * * ?" or
+	System started
+then	
+	postUpdate(Weather_Temp_Max, Weather_Temperature.maximumSince(now.toDateMidnight).state)
+	postUpdate(Weather_Temp_Min, Weather_Temperature.minimumSince(now.toDateMidnight).state)
+	logInfo("Weather", "Temperature evolved of " + Weather_Temperature.deltaSince(now.minusMinutes(2)) + " degrees.")
+end
+
+/** shows how to use sensor values from the past
+rule "Persistence Demo"
+when
+	Time cron "0 * * * * ?"
+then	
+	if(Weather_Temperature.changedSince(now.minusMinutes(1))) {
+		logInfo("PersistenceDemo", "2 minutes ago, the temperature was " + Weather_Temperature.historicState(now.minusMinutes(2)) + " degrees.")
+	}
+end
+
+/** 
+ * shows how to check recent switch states - very helpful to avoid executing something too often, just
+ * because somebody presses a button too often (e.g. sending a notification, if the doorbell button is pressed)
+
+rule "Persistence Demo 2"
+when
+	Item DemoSwitch received command
+then
+	if(!DemoSwitch.changedSince(now.minusSeconds(5))) {
+		logInfo("PersistenceDemo2", "You did not press this button during the last 5 seconds!")
+	}
+end
+
+rule "Timer Demo"
+when
+	Item Light_GF_Corridor_Ceiling received command
+then
+	if(receivedCommand==ON) {
+		if(timer==null) {
+			// first ON command, so create a timer to turn the light off again
+			timer = createTimer(now.plusSeconds(10)) [|
+				sendCommand(Light_GF_Corridor_Ceiling, OFF)
+			]
+		} else {
+			// subsequent ON command, so reschedule the existing timer
+			timer.reschedule(now.plusSeconds(10))
+		}
+	} else if(receivedCommand==OFF) {
+		// remove any previously scheduled timer
+		if(timer!=null) {
+			timer.cancel
+			timer = null
+		}	
+	}
+end
+
+// Creates an item that stores the last update time of this item
+rule "Records last weather update time"
+when
+  Item Weather_Temperature received update
+then
+  postUpdate(Weather_LastUpdate, new DateTimeType())
+end
+
+// This rule will be used to test Scale transformation service
+rule "Compute humidex"
+when
+        Item Weather_Temperature changed or
+	Item Weather_Humidity changed
+then
+	var Number T = Weather_Temperature.state as DecimalType
+	var Number H = Weather_Humidity.state as DecimalType	
+	var Number x = 7.5 * T/(237.7 + T)
+	var Number e = 6.112 * Math::pow(10, x.doubleValue) * H/100
+	var Number humidex = T + (new Double(5) / new Double(9)) * (e - 10)
+	postUpdate(Weather_Humidex, humidex)
+end
+
+*/
