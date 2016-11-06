@@ -4,8 +4,8 @@ import org.openhab.model.script.actions.*
 import org.joda.time.*
 
 // Value to customize
-var int OpenWindowDeltaTemp = 3
-var int  OpenWindowDeltaTime = 10
+var int OpenWindowDeltaTemp = 2
+var int  OpenWindowDeltaTime = 5
 
 var int AutoStartAMInit = 5
 var int AutoStopAMInit = 9

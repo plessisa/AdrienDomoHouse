@@ -12,7 +12,7 @@ Group A_Sdb_TempChart (A_Sdb)
 Group A_Config "Configuration"
 Group TempChart "TempChart"
 Group ConsoSensorChart (gAppart)
-Group ConsoChart (gAppart)
+Group ConsoChart (All)
 
 Number SalonTempSensor "Temperature Salon [%.1f °C]" <temperature> (A_Salon_TempChart) {mqtt="<[mymosquitto:/home/1/T/1:state:default]"}
 Number SalonTempSensorChartPeriod "Chart Period" (A_Salon)

@@ -26,7 +26,7 @@ void setup() {
   Serial.println (LibVer);
   delay(1000);          // wait for sensor initialization
   dht.begin();
-  RadioStart(ChannelTemp1);
+  RadioStart(ChannelTemp2);
   pinMode(irPin, INPUT);
 }
 

@@ -116,7 +116,7 @@ void loop() {
   uint8_t pipe_num;
   bool DataReceived = false;
   char DatagramRx[3] = {0};
-  Serial.println("Check FP");
+  //Serial.println("Check FP");
   if (WirelessData.available(&pipe_num))
   {
       bool done = false;
@@ -450,7 +450,6 @@ void HandleDataRx(char DataRx[], int Pipe)
 /*
  * Example de trame
  * 
-
 START 
 Line: ADCO 020828500754 @
 Line: OPTARIF HC.. <
@@ -464,6 +463,4 @@ Line: PAPP 00400 %
 Line: HHPHC D /
 Line: MOTDETAT 000000 B
 STOP
-
  */
-
