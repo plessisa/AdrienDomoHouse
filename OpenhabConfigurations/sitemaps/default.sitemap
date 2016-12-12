@@ -42,7 +42,7 @@ sitemap default label="Appart Camille Adrien"
 	}
 	Frame label="Salle de bain" {
 	    Text item=SdbRadReport
-        Selection item=SdbRadModeSwitch mappings=[0="Arret",1="Marche"]
+        Selection item=SdbRadModeSwitch mappings=[0="Arret",1="Marche",3="Auto"]
         //Switch item=SdbTempSwitch
 	    Text item=SdbBalReport
         Selection item=SdbBalModeSwitch mappings=[0="Arret",1="Marche"]
@@ -74,8 +74,8 @@ sitemap default label="Appart Camille Adrien"
     		Chart label="Last day Meteo" item=TempChart period=d refresh=30000
 	    }
 	    Text item=Weather_LastUpdateopenweather valuecolor=[Weather_LastUpdateopenweather>700="orange", Weather_LastUpdateopenweather>1400="red"]
-		Text item=Weather_TemperatureWunderground valuecolor=[>25="orange",>15="green",>5="orange",<=5="blue"]
-		Text item=Weather_LastUpdateWunderground valuecolor=[Weather_LastUpdateWunderground>700="orange", Weather_LastUpdateWunderground>1400="red"]
+		//Text item=Weather_TemperatureWunderground valuecolor=[>25="orange",>15="green",>5="orange",<=5="blue"]
+		//Text item=Weather_LastUpdateWunderground valuecolor=[Weather_LastUpdateWunderground>700="orange", Weather_LastUpdateWunderground>1400="red"]
 		Text item=Weather_Humidity
 	}
 	Frame label="Settings" {
@@ -84,11 +84,16 @@ sitemap default label="Appart Camille Adrien"
 	        Setpoint item=TargetedTempChambre minValue=140 maxValue=250 step=5
 	        Setpoint item=TargetedTempBureau minValue=140 maxValue=250 step=5
 	    }
-		Text label="Auto Schedule" icon="settings" {
+		Text label="Auto Schedule Heater" icon="settings" {
 	        Setpoint item=AutoStartAM minValue=1 maxValue=23 step=1
 	        Setpoint item=AutoStopAM minValue=1 maxValue=23 step=1
 	        Setpoint item=AutoStartPM minValue=1 maxValue=23 step=1
 	        Setpoint item=AutoStopPM minValue=1 maxValue=23 step=1
+	    }
+		Text label="Auto Schedule Sdb" icon="settings" {
+	        Setpoint item=SdbStartCamille minValue=1 maxValue=23 step=1
+	        Setpoint item=SdbStartAdrien minValue=1 maxValue=23 step=1
+	        Setpoint item=SdbLenght minValue=1 maxValue=23 step=1
 	    }  
     }
 }

@@ -60,8 +60,8 @@ DateTime    Date    "Date et Heure: [%1$tT %1$td/%1$tm/%1$tY]"  (All)   { ntp="E
 /* Meteo item */
 Number	Weather_Temperatureopenweather	"Temperature Ext. openweather [%.1f °C]"	<temperature>	(A_Salon_TempChart, A_Chambre_TempChart, A_Bureau_TempChart, TempChart)	{weather="locationId=home3, type=temperature, property=current"}
 DateTime Weather_LastUpdateopenweather "Last Update [%1$ta %1$tr]"    
-Number	Weather_TemperatureWunderground	"Temperature Ext. Wunderground [%.1f °C]"	<temperature>	(TempChart)	{weather="locationId=home5, type=temperature, property=current"}
-DateTime Weather_LastUpdateWunderground "Last Update [%1$ta %1$tr]"    
+//Number	Weather_TemperatureWunderground	"Temperature Ext. Wunderground [%.1f °C]"	<temperature>	(TempChart)	{weather="locationId=home5, type=temperature, property=current"}
+//DateTime Weather_LastUpdateWunderground "Last Update [%1$ta %1$tr]"    
 Number	Weather_Humidity      	"Humidite Ext. [%d %%]"		<temperature>	(gAppart)	{weather="locationId=home3, type=atmosphere, property=humidity"}
 
 // Settings
@@ -73,6 +73,10 @@ Number AutoStartAM "Start AM [%d]" <clock> (A_Config)
 Number AutoStopAM "Stop AM [%d]" <clock> (A_Config)
 Number AutoStartPM "Start PM [%d]" <clock> (A_Config)
 Number AutoStopPM "Stop PM [%d]" <clock> (A_Config)
+
+Number SdbStartCamille "Start Camille [%d]" <clock> (A_Config)
+Number SdbStartAdrien "Start Adrien [%d]" <clock> (A_Config)
+Number SdbLenght "Length Sdb [%d]" <clock> (A_Config)
 
 
 /*

@@ -6,11 +6,18 @@ import org.joda.time.*
 // Value to customize
 var int OpenWindowDeltaTemp = 2
 var int  OpenWindowDeltaTime = 5
-
+ 
+// heater window
 var int AutoStartAMInit = 5
 var int AutoStopAMInit = 9
 var int AutoStartPMInit = 18
 var int AutoStopPMInit = 23
+
+// heater sdb
+var int SdbStartCamilleInit = 6
+var int SdbStartAdrienInit = 8
+var int SdbLenghtInit = 1
+
 
 var int TempTargetedSalonInit = 200
 var int TempTargetedChambreInit = 190
@@ -23,6 +30,7 @@ var String BureauModeChauff = "UNKNOWN"
 var String SdbModeChauff = "UNKNOWN"
 var String SdbBalModeChauff = "UNKNOWN"
 var int HeaterTime = 0
+var int HeaterSdbTime = 0
 
 val org.eclipse.xtext.xbase.lib.Functions$Function6 TempSensorChanged = [
     org.openhab.core.library.items.SwitchItem TempSwitch,
@@ -89,6 +97,33 @@ val org.eclipse.xtext.xbase.lib.Functions$Function4 SimpleChange = [
 	} else if (ModeChauff == "ON") {
 		logInfo(LogName, "Heater is force to ON")
 		sendCommand(TempSwitch,"ON")
+	} else {
+		logWarn(LogName, "We are in state that we don't handle: "+ModeChauff)			
+	}			
+]
+
+val org.eclipse.xtext.xbase.lib.Functions$Function4 SdbHeaterChange = [
+    org.openhab.core.library.items.SwitchItem TempSwitch,
+    String ModeChauff, int HeaterSdbTime, String LogName |
+     
+	if (ModeChauff == "UNKNOWN") {
+		logWarn(LogName, "We don't know the state so do nothing")
+	} else if (ModeChauff == "OFF") {
+		logInfo(LogName, "Heater is force to OFF")
+		sendCommand(TempSwitch,"OFF")
+	} else if (ModeChauff == "ON") {
+		logInfo(LogName, "Heater is force to ON")
+		sendCommand(TempSwitch,"ON")
+	} else if (ModeChauff == "AUTO"){
+	    if (HeaterSdbTime == 1) {
+			logInfo(LogName, "The time to start the SDB heater. Let's turn ON")
+			sendCommand(TempSwitch,"ON")
+		} else if (HeaterSdbTime == 0) {
+			logInfo(LogName, "The time to stop the SDB heater. Let's turn OFF")
+			sendCommand(TempSwitch,"OFF")
+		} else {
+			logWarn(LogName, "We are in heater Sdb Time that we don't handle: "+HeaterSdbTime)		
+		}
 	} else {
 		logWarn(LogName, "We are in state that we don't handle: "+ModeChauff)			
 	}			
@@ -186,8 +221,13 @@ rule "Initialize the system"
 		if(AutoStartPM.previousState != null) {postUpdate(AutoStartPM, AutoStartPM.previousState.getState())} else {postUpdate(AutoStartPM, AutoStartPMInit)}      
 		logInfo("TempManagerBureau", "Initialize Start PM " + AutoStartPM.state)
 		if(AutoStopPM.previousState != null) {postUpdate(AutoStopPM, AutoStopPM.previousState.getState())} else {postUpdate(AutoStopPM, AutoStopPMInit)}      	
-		logInfo("TempManagerBureau", "Initialize Stop PM " + AutoStopPM.state)
-		
+		logInfo("TempManagerBureau", "Initialize Stop PM " + AutoStopPM.state)		
+		if(SdbStartCamille.previousState != null) {postUpdate(SdbStartCamille, SdbStartCamille.previousState.getState())} else {postUpdate(SdbStartCamille, SdbStartCamilleInit)}      	
+		logInfo("TempManagerBureau", "Initialize Camille Sdb " + SdbStartCamille.state)		
+		if(SdbStartAdrien.previousState != null) {postUpdate(SdbStartAdrien, SdbStartAdrien.previousState.getState())} else {postUpdate(SdbStartAdrien, SdbStartAdrienInit)}      	
+		logInfo("TempManagerBureau", "Initialize Adrien Sdb " + SdbStartAdrien.state)		
+		if(SdbLenght.previousState != null) {postUpdate(SdbLenght, SdbLenght.previousState.getState())} else {postUpdate(SdbLenght, SdbLenghtInit)}      	
+		logInfo("TempManagerBureau", "Initialize Lenght Sdb " + SdbLenght.state)		
 		
 		///////////////////// JUST A COPY OF THE TIME RULE
        	// Prepare the timer
@@ -195,19 +235,34 @@ rule "Initialize the system"
         var int nAutoStopAM
         var int nAutoStartPM
         var int nAutoStopPM
+        var int nSdbStartCamille
+        var int nSdbStartAdrien
+        var int nSdbLenght
 		if(AutoStartAM.state instanceof DecimalType) {nAutoStartAM = (AutoStartAM.state as DecimalType).intValue()} else {nAutoStartAM = AutoStartAMInit}      
         if(AutoStopAM.state instanceof DecimalType) {nAutoStopAM = (AutoStopAM.state as DecimalType).intValue()} else {nAutoStopAM = AutoStopAMInit}        
         if(AutoStartPM.state instanceof DecimalType) {nAutoStartPM = (AutoStartPM.state as DecimalType).intValue()} else {nAutoStartPM = AutoStartPMInit}   
-        if(AutoStopPM.state instanceof DecimalType) {nAutoStopPM = (AutoStopPM.state as DecimalType).intValue()} else {nAutoStopPM = AutoStopPMInit} 
+        if(AutoStopPM.state instanceof DecimalType) {nAutoStopPM = (AutoStopPM.state as DecimalType).intValue()} else {nAutoStopPM = AutoStopPMInit}        
+		if(SdbStartCamille.state instanceof DecimalType) {nSdbStartCamille = (SdbStartCamille.state as DecimalType).intValue()} else {nSdbStartCamille = SdbStartCamilleInit} 
+		if(SdbStartAdrien.state instanceof DecimalType) {nSdbStartAdrien = (SdbStartAdrien.state as DecimalType).intValue()} else {nSdbStartAdrien = SdbStartAdrienInit} 
+		if(SdbLenght.state instanceof DecimalType) {nSdbLenght = (SdbLenght.state as DecimalType).intValue()} else {nSdbLenght = SdbLenghtInit} 
          
-        var DateTime StartTimeAM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
-        StartTimeAM = StartTimeAM.plusHours(nAutoStartAM)
-        var DateTime EndTimeAM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
-        EndTimeAM = EndTimeAM.plusHours(nAutoStopAM)
-        var DateTime StartTimePM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
-        StartTimePM = StartTimePM.plusHours(nAutoStartPM)
-        var DateTime EndTimePM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
-        EndTimePM = EndTimePM.plusHours(nAutoStopPM)
+             
+        var DateTime TimeDay = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
+        var DateTime StartTimeAM = TimeDay.plusHours(nAutoStartAM)
+        //var DateTime EndTimeAM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
+        var DateTime EndTimeAM = TimeDay.plusHours(nAutoStopAM)
+        //var DateTime StartTimePM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
+        var DateTime StartTimePM = TimeDay.plusHours(nAutoStartPM)
+        //var DateTime EndTimePM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
+        var DateTime EndTimePM = TimeDay.plusHours(nAutoStopPM)
+        var DateTime StartSdbCamille = TimeDay.plusHours(nSdbStartCamille)
+        var DateTime StopSdbCamille = StartSdbCamille.plusHours(nSdbLenght)
+        var DateTime StartSdbAdrien = TimeDay.plusHours(nSdbStartAdrien)
+        var DateTime StopSdbAdrien = StartSdbAdrien.plusHours(nSdbLenght)
+        logInfo("AutoManager", "StartSdbCamille: " + StartSdbCamille)	
+        logInfo("AutoManager", "StopSdbCamille: " + StopSdbCamille)	
+        logInfo("AutoManager", "StartSdbAdrien: " + StartSdbAdrien)	
+        logInfo("AutoManager", "StopSdbAdrien: " + StopSdbAdrien)	
         
 		// Detect which time slot we are right now
         if (EndTimePM.beforeNow) {
@@ -228,12 +283,23 @@ rule "Initialize the system"
         } else {
 			logWarn("AutoManager", "Can't found the current hour action")
         }
+        
+        if (StartSdbCamille.beforeNow && StopSdbCamille.afterNow) {
+			logInfo("AutoManager", "It's Sdb Camille Time.")
+        	HeaterSdbTime = 1      	
+        } else if (StartSdbAdrien.beforeNow && StopSdbAdrien.afterNow) {
+			logInfo("AutoManager", "It's Sdb Adrien Time.")
+    		HeaterSdbTime = 1          	
+        } else {
+		logInfo("AutoManager", "It's NOT Sdb Time.")
+        	HeaterSdbTime = 0
+        }
 		//////////////////////////////////////////////////
 		
 		TempSensorChanged.apply(SalonTempSwitch, SalonTempSensor, SalonModeChauff, TargetedTempSalon, HeaterTime, "TempManagerSalon")
 		TempSensorChanged.apply(ChambreTempSwitch, ChambreTempSensor, ChambreModeChauff, TargetedTempChambre, HeaterTime, "TempManagerChambre")
 		TempSensorChanged.apply(BureauTempSwitch, BureauTempSensor, BureauModeChauff, TargetedTempBureau, HeaterTime, "TempManagerBureau")
-		SimpleChange.apply(SdbTempSwitch, SdbModeChauff, HeaterTime, "TempManagerSdb")
+		SdbHeaterChange.apply(SdbTempSwitch, SdbModeChauff, HeaterSdbTime, "TempManagerSdb")
 		SimpleChange.apply(SdbBalSwitch, SdbBalModeChauff, HeaterTime, "TempManagerSdbBal")
 		
 end
@@ -325,11 +391,10 @@ rule "Mode Chauffage Sdb"
 		switch(receivedCommand) {
 			case 0 : SdbModeChauff = "OFF"
 			case 1 : SdbModeChauff = "ON"
-			case 2 : SdbModeChauff = "CONF"
 			case 3 : SdbModeChauff = "AUTO"
 		}
 		logInfo("TempManagerSdb", "We moved the mode to " + SdbModeChauff+".")
-		SimpleChange.apply(SdbTempSwitch, SdbModeChauff, HeaterTime, "TempManagerSdb")
+		SdbHeaterChange.apply(SdbTempSwitch, SdbModeChauff, HeaterSdbTime, "TempManagerSdb")
 		
 end
 
@@ -352,23 +417,35 @@ rule "Check the time it's now"
     when
         Time cron "0 0/5 * * * ?"
     then
+       	// Prepare the timer
         var int nAutoStartAM
         var int nAutoStopAM
         var int nAutoStartPM
         var int nAutoStopPM
+        var int nSdbStartCamille
+        var int nSdbStartAdrien
+        var int nSdbLenght
 		if(AutoStartAM.state instanceof DecimalType) {nAutoStartAM = (AutoStartAM.state as DecimalType).intValue()} else {nAutoStartAM = AutoStartAMInit}      
         if(AutoStopAM.state instanceof DecimalType) {nAutoStopAM = (AutoStopAM.state as DecimalType).intValue()} else {nAutoStopAM = AutoStopAMInit}        
         if(AutoStartPM.state instanceof DecimalType) {nAutoStartPM = (AutoStartPM.state as DecimalType).intValue()} else {nAutoStartPM = AutoStartPMInit}   
-        if(AutoStopPM.state instanceof DecimalType) {nAutoStopPM = (AutoStopPM.state as DecimalType).intValue()} else {nAutoStopPM = AutoStopPMInit} 
+        if(AutoStopPM.state instanceof DecimalType) {nAutoStopPM = (AutoStopPM.state as DecimalType).intValue()} else {nAutoStopPM = AutoStopPMInit}        
+		if(SdbStartCamille.state instanceof DecimalType) {nSdbStartCamille = (SdbStartCamille.state as DecimalType).intValue()} else {nSdbStartCamille = SdbStartCamilleInit} 
+		if(SdbStartAdrien.state instanceof DecimalType) {nSdbStartAdrien = (SdbStartAdrien.state as DecimalType).intValue()} else {nSdbStartAdrien = SdbStartAdrienInit} 
+		if(SdbLenght.state instanceof DecimalType) {nSdbLenght = (SdbLenght.state as DecimalType).intValue()} else {nSdbLenght = SdbLenghtInit} 
          
-        var DateTime StartTimeAM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
-        StartTimeAM = StartTimeAM.plusHours(nAutoStartAM)
-        var DateTime EndTimeAM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
-        EndTimeAM = EndTimeAM.plusHours(nAutoStopAM)
-        var DateTime StartTimePM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
-        StartTimePM = StartTimePM.plusHours(nAutoStartPM)
-        var DateTime EndTimePM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
-        EndTimePM = EndTimePM.plusHours(nAutoStopPM)
+             
+        var DateTime TimeDay = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
+        var DateTime StartTimeAM = TimeDay.plusHours(nAutoStartAM)
+        //var DateTime EndTimeAM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
+        var DateTime EndTimeAM = TimeDay.plusHours(nAutoStopAM)
+        //var DateTime StartTimePM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
+        var DateTime StartTimePM = TimeDay.plusHours(nAutoStartPM)
+        //var DateTime EndTimePM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
+        var DateTime EndTimePM = TimeDay.plusHours(nAutoStopPM)
+        var DateTime StartSdbCamille = TimeDay.plusHours(nSdbStartCamille)
+        var DateTime StopSdbCamille = StartSdbCamille.plusHours(nSdbLenght)
+        var DateTime StartSdbAdrien = TimeDay.plusHours(nSdbStartAdrien)
+        var DateTime StopSdbAdrien = StartSdbCamille.plusHours(nSdbLenght)
         
 		// Detect which time slot we are right now
         if (EndTimePM.beforeNow) {
@@ -389,6 +466,18 @@ rule "Check the time it's now"
         } else {
 			logWarn("AutoManager", "Can't found the current hour action")
         }
+        
+        if (StartSdbCamille.beforeNow && StopSdbCamille.afterNow) {
+			logInfo("AutoManager", "It's Sdb Camille Time.")
+        	HeaterSdbTime = 1      	
+        } else if (StartSdbAdrien.beforeNow && StopSdbAdrien.afterNow) {
+			logInfo("AutoManager", "It's Sdb Adrien Time.")
+    		HeaterSdbTime = 1          	
+        } else {
+		logInfo("AutoManager", "It's NOT Sdb Time.")
+        	HeaterSdbTime = 0
+        }
+		SdbHeaterChange.apply(SdbTempSwitch, SdbModeChauff, HeaterSdbTime, "TempManagerSdb")
 end
 
 rule "Check the daily conso"
@@ -404,13 +493,6 @@ when
   Item Weather_Temperatureopenweather received update
 then
   postUpdate(Weather_LastUpdateopenweather, new DateTimeType())
-end
-
-rule "Records last weather update time"
-when
-  Item Weather_TemperatureWunderground received update
-then
-  postUpdate(Weather_LastUpdateWunderground, new DateTimeType())
 end
 
 /* 
