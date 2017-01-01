@@ -18,34 +18,38 @@ Number SalonTempSensor "Temperature Salon [%.1f °C]" <temperature> (A_Salon_Tem
 Number SalonTempSensorChartPeriod "Chart Period" (A_Salon)
 Number SalonHumiSensor "Humidite Salon [%.1f %%]" <temperature> (A_Salon) {mqtt="<[mymosquitto:/home/1/H/1:state:default]"}
 Number SalonMoveSensor "Presence Salon" <parents> (A_Salon) {mqtt="<[mymosquitto:/home/1/M/1:state:default]"}
+DateTime SalonLastUpdateSensor "Salon State [%1$ta %1$tr]"   
 Number SalonRadReport	"Radiateur Salon" <fire> (A_Salon_TempChart) {mqtt="<[mymosquitto:/home/5/R/1:state:default]"}
 Number SalonRadModeSwitch "Mode de chauffage Salon" <fire> (A_Config)
-Switch SalonTempSwitch "Radiateur2" (A_Salon) {mqtt=">[mymosquitto:/home/5/A/1:command:ON:1],>[mymosquitto:/home/5/A/1:command:OFF:0],<[mymosquitto:/home/5/R/1:state:default"}
+Switch SalonTempSwitch "Radiateur2" (A_Salon) {mqtt=">[mymosquitto:/home/5/A/1:command:ON:1],>[mymosquitto:/home/5/A/1:command:OFF:0]"}
 
 Number ChambreTempSensor "Temperature Chambre [%.1f °C]" <temperature> (A_Chambre_TempChart) {mqtt="<[mymosquitto:/home/2/T/1:state:default]"}
 Number ChambreTempSensorChartPeriod "Chart Period" (A_Chambre)
 Number ChambreHumiSensor "Humidite Chambre [%.1f %%]" <temperature> (A_Chambre) {mqtt="<[mymosquitto:/home/2/H/1:state:default]"}
 //Number ChambreMoveSensor "Presence" <"door-closed"> (A_Chambre) {mqtt="<[mymosquitto:/home/2/M/1:state:default]"}
+DateTime ChambreLastUpdateSensor "Chambre State [%1$ta %1$tr]"   
 Number ChambreRadReport	"Radiateur Chambre" <fire> (A_Chambre_TempChart) {mqtt="<[mymosquitto:/home/5/R/2:state:default]"}
 Number ChambreRadModeSwitch "Mode de chauffage Chambre" <fire> (A_Config)
-Switch ChambreTempSwitch "Radiateur" (A_Chambre) {mqtt=">[mymosquitto:/home/5/A/2:command:ON:1],>[mymosquitto:/home/5/A/2:command:OFF:0],<[mymosquitto:/home/5/R/2:state:default"}
+Switch ChambreTempSwitch "Radiateur" (A_Chambre) {mqtt=">[mymosquitto:/home/5/A/2:command:ON:1],>[mymosquitto:/home/5/A/2:command:OFF:0]"}
 
 Number BureauTempSensor "Temperature Bureau [%.1f °C]" <temperature> (A_Bureau_TempChart) {mqtt="<[mymosquitto:/home/3/T/1:state:default]"}
 Number BureauTempSensorChartPeriod "Chart Period" (A_Bureau)
 Number BureauHumiSensor "Humidite Bureau [%.1f %%]" <temperature> (A_Bureau) {mqtt="<[mymosquitto:/home/3/H/1:state:default]"}
 //Number BureauMoveSensor "Presence" <"door-closed"> (A_Bureau) {mqtt="<[mymosquitto:/home/3/M/1:state:default]"}
+DateTime BureauLastUpdateSensor "Bureau State [%1$ta %1$tr]"   
 Number BureauRadReport	"Radiateur Bureau" <fire> (A_Bureau_TempChart) {mqtt="<[mymosquitto:/home/5/R/3:state:default]"}
 Number BureauRadModeSwitch "Mode de chauffage Bureau" <fire> (A_Config)
-Switch BureauTempSwitch "Radiateur" (A_Bureau) {mqtt=">[mymosquitto:/home/5/A/3:command:ON:1],>[mymosquitto:/home/5/A/3:command:OFF:0],<[mymosquitto:/home/5/R/3:state:default"}
+Switch BureauTempSwitch "Radiateur" (A_Bureau) {mqtt=">[mymosquitto:/home/5/A/3:command:ON:1],>[mymosquitto:/home/5/A/3:command:OFF:0]"}
 
 Number SdbRadReport	"Radiateur Sdb" <fire> (A_Sdb_TempChart) {mqtt="<[mymosquitto:/home/5/R/4:state:default]"}
 Number SdbRadModeSwitch "Mode de chauffage Sdb" <fire> (A_Config)
-Switch SdbTempSwitch "Radiateur" (A_Sdb) {mqtt=">[mymosquitto:/home/5/A/4:command:ON:1],>[mymosquitto:/home/5/A/4:command:OFF:0],<[mymosquitto:/home/5/R/4:state:default"}
+Switch SdbTempSwitch "Radiateur" (A_Sdb) {mqtt=">[mymosquitto:/home/5/A/4:command:ON:1],>[mymosquitto:/home/5/A/4:command:OFF:0]"}
 Number SdbBalReport	"Ballon Eau Chaude" <fire> (A_Sdb_TempChart) {mqtt="<[mymosquitto:/home/5/R/5:state:default]"}
 Number SdbBalModeSwitch "Ballon Eau Chaude" <fire> (A_Config)
-Switch SdbBalSwitch "Ballon Eau Chaude" (A_Sdb) {mqtt=">[mymosquitto:/home/5/A/5:command:ON:1],>[mymosquitto:/home/5/A/5:command:OFF:0],<[mymosquitto:/home/5/R/5:state:default"}
+Switch SdbBalSwitch "Ballon Eau Chaude" (A_Sdb) {mqtt=">[mymosquitto:/home/5/A/5:command:ON:1],>[mymosquitto:/home/5/A/5:command:OFF:0]"}
 
 Number AppartConsoSensor "Consomation [%d VA]" <energy> (ConsoSensorChart) {mqtt="<[mymosquitto:/home/4/S/1:state:default]"}
+DateTime ConsoLastUpdateSensor "Conso State [%1$ta %1$tr]"   
 Number ConsoSensorChartPeriod "Chart Period" (gAppart)
 Number AppartHPSensor "HP [%d kWh]" <energy> (gAppart) {mqtt="<[mymosquitto:/home/4/P/1:state:default]"}
 Number AppartHCSensor "HC [%d kWh]" <energy> (gAppart) {mqtt="<[mymosquitto:/home/4/C/1:state:default]"}

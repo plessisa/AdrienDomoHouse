@@ -308,6 +308,7 @@ rule "Temperature Salon change"
 	when
 		Item SalonTempSensor changed
 	then
+	  	postUpdate(SalonLastUpdateSensor, new DateTimeType())
 		if (SalonTempSensor.deltaSince(now.minusMinutes(OpenWindowDeltaTime)) > OpenWindowDeltaTemp) {
 			logWarn("TempManagerSalon", "Temperature changed more than "+ OpenWindowDeltaTemp +" C in "+OpenWindowDeltaTime+" mins. Stop heater")
 			sendCommand(SalonTempSwitch,"OFF")
@@ -320,6 +321,7 @@ rule "Temperature Chambre change"
 	when
 		Item ChambreTempSensor changed
 	then
+		postUpdate(ChambreLastUpdateSensor, new DateTimeType())
 		if (ChambreTempSensor.deltaSince(now.minusMinutes(OpenWindowDeltaTime)) > OpenWindowDeltaTemp) {
 			logWarn("TempManagerChambre", "Temperature changed more than "+ OpenWindowDeltaTemp +" C in "+OpenWindowDeltaTime+" mins. Stop heater")
 			sendCommand(ChambreTempSwitch,"OFF")
@@ -332,6 +334,7 @@ rule "Temperature Bureau change"
 	when
 		Item BureauTempSensor changed
 	then
+		postUpdate(BureauLastUpdateSensor, new DateTimeType())
 		if (BureauTempSensor.deltaSince(now.minusMinutes(OpenWindowDeltaTime)) > OpenWindowDeltaTemp) {
 			logWarn("TempManagerBureau", "Temperature changed more than "+ OpenWindowDeltaTemp +" C in "+OpenWindowDeltaTime+" mins. Stop heater")
 			sendCommand(BureauTempSwitch,"OFF")
@@ -339,6 +342,21 @@ rule "Temperature Bureau change"
 			TempSensorChanged.apply(BureauTempSwitch, BureauTempSensor, BureauModeChauff, TargetedTempBureau, HeaterTime, "TempManagerBureau")
 		}
 end
+
+rule "Records last weather update time"
+when
+  Item Weather_Temperatureopenweather received update
+then
+  postUpdate(Weather_LastUpdateopenweather, new DateTimeType())
+end
+
+rule "Records last AppartConsoSensor update time"
+when
+  Item AppartConsoSensor received update
+then
+  postUpdate(ConsoLastUpdateSensor, new DateTimeType())
+end
+
 
 rule "Mode Chauffage Salon"
 	when
@@ -488,12 +506,6 @@ rule "Check the daily conso"
 		AppartHCConso.postUpdate(AppartHCSensor.deltaSince(now.minusHours(24)))
 end
 
-rule "Records last weather update time"
-when
-  Item Weather_Temperatureopenweather received update
-then
-  postUpdate(Weather_LastUpdateopenweather, new DateTimeType())
-end
 
 /* 
  * 

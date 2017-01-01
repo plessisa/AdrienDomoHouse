@@ -1,7 +1,7 @@
 sitemap default label="Appart Camille Adrien"
 {
 	Frame label="Salon" {
-	    Text item=SalonTempSensor valuecolor=[>20.5="orange",>19.5="green",<=5="blue"] {
+	    Text item=SalonTempSensor valuecolor=[>20.5="orange",>19.5="green",<=15="blue"] {
 	    	Switch item=SalonTempSensorChartPeriod mappings=[0="Day", 1="Week", 2="Month"]
     		Chart item=A_Salon_TempChart period=D refresh=30000 visibility=[SalonTempSensorChartPeriod==0, SalonTempSensorChartPeriod=="Uninitialized"] 
     		Chart item=A_Salon_TempChart period=W refresh=30000 visibility=[SalonTempSensorChartPeriod==1]
@@ -17,7 +17,7 @@ sitemap default label="Appart Camille Adrien"
 	}
         
 	Frame label="Chambre" {
-		Text item=ChambreTempSensor valuecolor=[>20.5="orange",>19.5="green",<=5="blue"] {
+		Text item=ChambreTempSensor valuecolor=[>20.5="orange",>19.5="green",<=15="blue"] {
 	    	Switch item=ChambreTempSensorChartPeriod mappings=[0="Day", 1="Week", 2="Month"]
     		Chart item=A_Chambre_TempChart period=D refresh=30000 visibility=[ChambreTempSensorChartPeriod==0, ChambreTempSensorChartPeriod=="Uninitialized"] 
     		Chart item=A_Chambre_TempChart period=W refresh=30000 visibility=[ChambreTempSensorChartPeriod==1]
@@ -29,7 +29,7 @@ sitemap default label="Appart Camille Adrien"
         //Switch item=ChambreTempSwitch  	                    
 	}
 	Frame label="Bureau" {
-		Text item=BureauTempSensor valuecolor=[>20.5="orange",>19.5="green",<=5="blue"] {
+		Text item=BureauTempSensor valuecolor=[>20.5="orange",>19.5="green",<=15="blue"] {
 	    	Switch item=BureauTempSensorChartPeriod mappings=[0="Day", 1="Week", 2="Month"]
     		Chart item=A_Bureau_TempChart period=D refresh=30000 visibility=[BureauTempSensorChartPeriod==0, BureauTempSensorChartPeriod=="Uninitialized"] 
     		Chart item=A_Bureau_TempChart period=W refresh=30000 visibility=[BureauTempSensorChartPeriod==1]
@@ -78,6 +78,14 @@ sitemap default label="Appart Camille Adrien"
 		//Text item=Weather_LastUpdateWunderground valuecolor=[Weather_LastUpdateWunderground>700="orange", Weather_LastUpdateWunderground>1400="red"]
 		Text item=Weather_Humidity
 	}
+	
+	Frame label="System Status" {
+    	Text item=SalonLastUpdateSensor valuecolor=[SalonLastUpdateSensor>600="red", SalonLastUpdateSensor>240="orange"]
+    	Text item=ChambreLastUpdateSensor valuecolor=[ChambreLastUpdateSensor>600="red", ChambreLastUpdateSensor>240="orange"]
+    	Text item=BureauLastUpdateSensor valuecolor=[BureauLastUpdateSensor>600="red", BureauLastUpdateSensor>240="orange"]
+    	Text item=ConsoLastUpdateSensor valuecolor=[ConsoLastUpdateSensor>600="red", ConsoLastUpdateSensor>240="orange"]
+	}
+		
 	Frame label="Settings" {
 		Text label="Targeted Temp" icon="settings" {
 	        Setpoint item=TargetedTempSalon minValue=140 maxValue=250 step=5

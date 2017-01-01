@@ -371,11 +371,13 @@ void HandleDataRx(char DataRx[], int Pipe)
 {
 #ifdef debug
   char* resultString = strchr(DataRx,' ') + 1;
-  Serial.print("Fil Pilote ");
+  Serial.print("Fil Pilote: ");
   Serial.print(DataRx[0]);
   Serial.print(", value: ");
   Serial.println(String(resultString));
 #endif
+  //Ouverture de la liaison radio
+  RadioStart(ChannelFilPilote);
   
   if (DataRx[0]=='1')
   {
@@ -432,13 +434,13 @@ void HandleDataRx(char DataRx[], int Pipe)
     }
     RadioTransmit(RADIA, 5, StateRE1);
   }
+
 }
 
 
 /*
  * Example de trame
  * 
-
 START 
 Line: ADCO 020828500754 @
 Line: OPTARIF HC.. <
@@ -452,6 +454,4 @@ Line: PAPP 00400 %
 Line: HHPHC D /
 Line: MOTDETAT 000000 B
 STOP
-
  */
-
