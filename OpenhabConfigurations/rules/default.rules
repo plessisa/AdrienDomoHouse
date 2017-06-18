@@ -32,6 +32,12 @@ var String SdbBalModeChauff = "UNKNOWN"
 var int HeaterTime = 0
 var int HeaterSdbTime = 0
 
+var DateTime SalonLastUpdateSensorTime = null
+var DateTime ChambreLastUpdateSensorTime = null
+var DateTime BureauLastUpdateSensorTime = null
+var DateTime ConsoLastUpdateSensorTime = null
+var DateTime WeatherLastUpdateSensorTime = null
+
 val org.eclipse.xtext.xbase.lib.Functions$Function6 TempSensorChanged = [
     org.openhab.core.library.items.SwitchItem TempSwitch,
     org.openhab.core.library.items.NumberItem  TempSensor,
@@ -308,6 +314,7 @@ rule "Temperature Salon change"
 	when
 		Item SalonTempSensor changed
 	then
+		SalonLastUpdateSensorTime = now
 	  	postUpdate(SalonLastUpdateSensor, new DateTimeType())
 		if (SalonTempSensor.deltaSince(now.minusMinutes(OpenWindowDeltaTime)) > OpenWindowDeltaTemp) {
 			logWarn("TempManagerSalon", "Temperature changed more than "+ OpenWindowDeltaTemp +" C in "+OpenWindowDeltaTime+" mins. Stop heater")
@@ -321,6 +328,7 @@ rule "Temperature Chambre change"
 	when
 		Item ChambreTempSensor changed
 	then
+		ChambreLastUpdateSensorTime = now
 		postUpdate(ChambreLastUpdateSensor, new DateTimeType())
 		if (ChambreTempSensor.deltaSince(now.minusMinutes(OpenWindowDeltaTime)) > OpenWindowDeltaTemp) {
 			logWarn("TempManagerChambre", "Temperature changed more than "+ OpenWindowDeltaTemp +" C in "+OpenWindowDeltaTime+" mins. Stop heater")
@@ -334,6 +342,7 @@ rule "Temperature Bureau change"
 	when
 		Item BureauTempSensor changed
 	then
+		BureauLastUpdateSensorTime = now
 		postUpdate(BureauLastUpdateSensor, new DateTimeType())
 		if (BureauTempSensor.deltaSince(now.minusMinutes(OpenWindowDeltaTime)) > OpenWindowDeltaTemp) {
 			logWarn("TempManagerBureau", "Temperature changed more than "+ OpenWindowDeltaTemp +" C in "+OpenWindowDeltaTime+" mins. Stop heater")
@@ -347,14 +356,16 @@ rule "Records last weather update time"
 when
   Item Weather_Temperatureopenweather received update
 then
-  postUpdate(Weather_LastUpdateopenweather, new DateTimeType())
+	WeatherLastUpdateSensorTime = now
+	postUpdate(Weather_LastUpdateopenweather, new DateTimeType())
 end
 
 rule "Records last AppartConsoSensor update time"
 when
   Item AppartConsoSensor received update
 then
-  postUpdate(ConsoLastUpdateSensor, new DateTimeType())
+	ConsoLastUpdateSensorTime = now
+  	postUpdate(ConsoLastUpdateSensor, new DateTimeType())
 end
 
 
@@ -431,6 +442,42 @@ rule "Mode Chauffage Ballon Eau chaude"
 		
 end
 
+rule "Mode Vacances"
+	when
+		Item AppartVacSwitch received command
+	then
+		switch(AppartVacSwitch.state) {
+			case 0:
+			{
+				logInfo("VacanceManager", "Turned OFF Vacance Mode")
+				postUpdate(SalonRadModeSwitch, 2)
+				SalonModeChauff = "CONF"
+				postUpdate(ChambreRadModeSwitch, 2)
+				ChambreModeChauff = "CONF"
+				postUpdate(BureauRadModeSwitch, 2)	
+				BureauModeChauff = "CONF"
+				postUpdate(SdbRadModeSwitch, 3)	
+				SdbModeChauff = "AUTO"
+				postUpdate(SdbBalModeSwitch, 1)	
+				SdbBalModeChauff = "ON"
+			}			
+			case 1:
+			{
+				logInfo("VacanceManager", "Turned ON Vacance Mode")
+				postUpdate(SalonRadModeSwitch, 0)
+				SalonModeChauff = "OFF"
+				postUpdate(ChambreRadModeSwitch, 0)
+				ChambreModeChauff = "OFF"
+				postUpdate(BureauRadModeSwitch, 0)	
+				BureauModeChauff = "OFF"
+				postUpdate(SdbRadModeSwitch, 0)	
+				SdbModeChauff = "OFF"
+				postUpdate(SdbBalModeSwitch, 0)
+				SdbBalModeChauff = "OFF"
+			}
+		}
+end
+
 rule "Check the time it's now"
     when
         Time cron "0 0/5 * * * ?"
@@ -503,7 +550,21 @@ rule "Check the daily conso"
         Time cron "0 0 0 * * ?"
     then
     	AppartHPConso.postUpdate(AppartHPSensor.deltaSince(now.minusHours(24)))
-		AppartHCConso.postUpdate(AppartHCSensor.deltaSince(now.minusHours(24)))
+		AppartHCConso.postUpdate(AppartHCSensor.deltaSince(now.minusHours(24)))		
+end
+
+rule "Check the bal state"
+    when
+        Time cron "0 0 23 * * ?"
+    then
+    	logInfo("Reset Bal", "Check On/Off on Bal: "+ SdbBalSwitch.state)
+		if (SdbBalModeChauff == "ON") {
+			logInfo("Reset Bal", "Do On/Off on Bal: "+ SdbBalSwitch.state)
+			sendCommand(SdbBalSwitch,"OFF")
+			Thread::sleep(10000)
+			sendCommand(SdbBalSwitch,"ON")
+			logInfo("Reset Bal", "Completed On/Off on Bal: "+ SdbBalSwitch.state)
+		}
 end
 
 
