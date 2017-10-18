@@ -43,9 +43,32 @@ sitemap default label="Appart Camille Adrien"
 	}
 	Frame label="Appart" {
 	    Text item=SdbBalReport
-        Selection item=SdbBalModeSwitch mappings=[0="Arret",1="Marche"]  
-		Selection item=AppartVacSwitch mappings=[0="Off", 1="On"]
+        Selection item=SdbBalModeSwitch mappings=[0="Arret",1="Marche"]
+        Switch item=Zwave1Switch
+        Text item=Zwave1ConsoCur
+        Text item=Zwave1ConsoTot
+        Switch item=Zwave2Switch
+        Text item=Zwave2ConsoCur
+        Text item=Zwave2ConsoTot
 	}
+	Frame label="Mode vacance" {
+
+		Text item=Alarm_MasterTime icon="present-off" visibility=[Alarm_Master==ON] {
+			Frame label="Master Alarm" {
+				Switch item=Alarm_Master
+				Text item=Alarm_MasterTime
+				Setpoint item=Alarm_MasterTimeMins minValue=0 maxValue=30 step=1
+			}
+		}
+		Text item=Alarm_MasterTime icon="present-on" visibility=[Alarm_Master==OFF] {
+			Frame label="Master Alarm" {
+				Switch item=Alarm_Master
+				Text item=Alarm_MasterTime
+				Setpoint item=Alarm_MasterTimeMins minValue=0 maxValue=30 step=1
+			}
+		}
+	}
+	
 	Frame label="Consomation" {
         Text item=AppartConsoSensor  {
 	    	Switch item=ConsoSensorChartPeriod mappings=[0="Day", 1="Week", 2="Month"]

@@ -48,7 +48,11 @@ Switch SdbTempSwitch "Radiateur" (A_Sdb) {mqtt=">[mymosquitto:/home/5/A/4:comman
 Number SdbBalReport	"Ballon Eau Chaude" <fire> (A_Sdb_TempChart) {mqtt="<[mymosquitto:/home/5/R/5:state:default]"}
 Number SdbBalModeSwitch "Ballon Eau Chaude" <fire> (A_Config)
 Switch SdbBalSwitch "Ballon Eau Chaude" (A_Sdb) {mqtt=">[mymosquitto:/home/5/A/5:command:ON:1],>[mymosquitto:/home/5/A/5:command:OFF:0]"}
-Number AppartVacSwitch "Mode Vacances" <calendar> (gAppart)
+
+Switch Alarm_Master "Master Alarm" <presence> (gAppart)
+Number Alarm_MasterTimeMins "Master Alarm" <clock> (gAppart)
+String Alarm_MasterTime "Master Alarm [%s]" <clock>
+Switch Alarm_MasterEvent "Master Alarm Event" <alarm> (gAppart)
 
 
 Number AppartConsoSensor "Conso inst. [%d VA]" <energy> (ConsoSensorChart) {mqtt="<[mymosquitto:/home/4/S/1:state:default]"}
@@ -84,6 +88,12 @@ Number SdbStartCamille "Start Camille [%d]" <clock> (A_Config)
 Number SdbStartAdrien "Start Adrien [%d]" <clock> (A_Config)
 Number SdbLenght "Length Sdb [%d]" <clock> (A_Config)
 
+Switch Zwave1Switch "Z-Wave 1" {zwave="5:command=SWITCH_BINARY"}
+Number Zwave1ConsoCur "Z-Wave 1 Current Conso [%.1f W]" {zwave="5:command=sensor_multilevel"}
+Number Zwave1ConsoTot "Z-Wave 1 total Conso [%.2f KWh]" {zwave="5:command=meter"}
+Switch Zwave2Switch "Z-Wave 2" {zwave="6:command=SWITCH_BINARY"}
+Number Zwave2ConsoCur "Z-Wave 2 Current Conso [%.1f W]" {zwave="6:command=sensor_multilevel"}
+Number Zwave2ConsoTot "Z-Wave 2 total Conso [%.2f KWh]" {zwave="6:command=meter"}
 
 /*
  * 

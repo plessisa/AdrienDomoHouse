@@ -23,6 +23,8 @@ var int TempTargetedSalonInit = 200
 var int TempTargetedChambreInit = 190
 var int TempTargetedBureauInit = 190
 
+var Timer masterAlarmTime = null
+
 //Initialization
 var String SalonModeChauff = "UNKNOWN"
 var String ChambreModeChauff = "UNKNOWN"
@@ -149,6 +151,7 @@ rule "Initialize the system"
 			case 3 : SalonModeChauff = "AUTO"
 			default: SalonModeChauff = "OFF"
 		}
+		TempSensorChanged.apply(SalonTempSwitch, SalonTempSensor, SalonModeChauff, TargetedTempSalon, HeaterTime, "TempManagerSalon")
 		logInfo("TempManagerSalon", "Initialize the mode to " + SalonModeChauff)
 		
 		if (ChambreRadModeSwitch.previousState != null) {
@@ -161,6 +164,7 @@ rule "Initialize the system"
 			case 3 : ChambreModeChauff = "AUTO"
 			default: ChambreModeChauff = "OFF"
 		}
+		TempSensorChanged.apply(ChambreTempSwitch, ChambreTempSensor, ChambreModeChauff, TargetedTempChambre, HeaterTime, "TempManagerChambre")
 		logInfo("TempManagerChambre", "Initialize the mode to " + ChambreModeChauff)
 		
 		if (BureauRadModeSwitch.previousState != null) {
@@ -173,6 +177,7 @@ rule "Initialize the system"
 			case 3 : BureauModeChauff = "AUTO"
 			default: BureauModeChauff = "OFF"
 		}
+		TempSensorChanged.apply(BureauTempSwitch, BureauTempSensor, BureauModeChauff, TargetedTempBureau, HeaterTime, "TempManagerBureau")
 		logInfo("TempManagerBureau", "Initialize the mode to " + BureauModeChauff)
 		
 		if (SdbRadModeSwitch.previousState != null) {
@@ -185,6 +190,7 @@ rule "Initialize the system"
 			case 3 : SdbModeChauff = "AUTO"
 			default: SdbModeChauff = "OFF"
 		}
+		SdbHeaterChange.apply(SdbTempSwitch, SdbModeChauff, HeaterSdbTime, "TempManagerSdb")
 		logInfo("TempManagerSdb", "Initialize the mode to " + SdbModeChauff)
 		
 		if (SdbBalModeSwitch.previousState != null) {
@@ -197,7 +203,13 @@ rule "Initialize the system"
 			case 3 : SdbBalModeChauff = "AUTO"
 			default: SdbBalModeChauff = "OFF"
 		}
+		SimpleChange.apply(SdbBalSwitch, SdbBalModeChauff, HeaterTime, "TempManagerSdbBal")
 		logInfo("TempManagerSdbBal", "Initialize the mode to " + SdbBalModeChauff)
+		
+		if (Alarm_Master.previousState != null) {
+			postUpdate(Alarm_Master, Alarm_Master.previousState.getState())	
+		}
+		logInfo("TempManagerSdbBal", "Initialize the mode to " + Alarm_Master)
 		
 		
 		if (TargetedTempSalon.previousState != null) {
@@ -324,6 +336,13 @@ rule "Temperature Salon change"
 		}
 end
 
+rule "Somone in change"
+	when
+		Item SalonMoveSensor changed
+	then
+		Zwave1Switch.sendCommand(ON)
+end
+
 rule "Temperature Chambre change"
 	when
 		Item ChambreTempSensor changed
@@ -442,42 +461,6 @@ rule "Mode Chauffage Ballon Eau chaude"
 		
 end
 
-rule "Mode Vacances"
-	when
-		Item AppartVacSwitch received command
-	then
-		switch(AppartVacSwitch.state) {
-			case 0:
-			{
-				logInfo("VacanceManager", "Turned OFF Vacance Mode")
-				postUpdate(SalonRadModeSwitch, 2)
-				SalonModeChauff = "CONF"
-				postUpdate(ChambreRadModeSwitch, 2)
-				ChambreModeChauff = "CONF"
-				postUpdate(BureauRadModeSwitch, 2)	
-				BureauModeChauff = "CONF"
-				postUpdate(SdbRadModeSwitch, 3)	
-				SdbModeChauff = "AUTO"
-				postUpdate(SdbBalModeSwitch, 1)	
-				SdbBalModeChauff = "ON"
-			}			
-			case 1:
-			{
-				logInfo("VacanceManager", "Turned ON Vacance Mode")
-				postUpdate(SalonRadModeSwitch, 0)
-				SalonModeChauff = "OFF"
-				postUpdate(ChambreRadModeSwitch, 0)
-				ChambreModeChauff = "OFF"
-				postUpdate(BureauRadModeSwitch, 0)	
-				BureauModeChauff = "OFF"
-				postUpdate(SdbRadModeSwitch, 0)	
-				SdbModeChauff = "OFF"
-				postUpdate(SdbBalModeSwitch, 0)
-				SdbBalModeChauff = "OFF"
-			}
-		}
-end
-
 rule "Check the time it's now"
     when
         Time cron "0 0/5 * * * ?"
@@ -543,6 +526,12 @@ rule "Check the time it's now"
         	HeaterSdbTime = 0
         }
 		SdbHeaterChange.apply(SdbTempSwitch, SdbModeChauff, HeaterSdbTime, "TempManagerSdb")
+		
+	    var Number MaxMoveSensor = SalonMoveSensor.maximumSince(now.minusHours(1)).state as DecimalType
+	    if (MaxMoveSensor == 0) {
+	    	Zwave1Switch.sendCommand(OFF)
+	    }
+	
 end
 
 rule "Check the daily conso"
@@ -565,6 +554,109 @@ rule "Check the bal state"
 			sendCommand(SdbBalSwitch,"ON")
 			logInfo("Reset Bal", "Completed On/Off on Bal: "+ SdbBalSwitch.state)
 		}
+end
+
+rule "Master alarm time"
+when
+	Item Alarm_MasterTimeMins received update
+then
+	var int minutes = (Alarm_MasterTimeMins.state as DecimalType).intValue()
+
+	if (masterAlarmTime != null)
+		masterAlarmTime.cancel()
+
+	// work out when the alarm is to fire - start from midnight
+	var DateTime alarmTime = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
+
+	// add the number of minutes selected
+	alarmTime = alarmTime.plusDays(minutes)
+
+	// create a timer to execute the alarm at the specified time
+	masterAlarmTime = createTimer(alarmTime) [| 
+		if (Alarm_Master.state == ON) 
+			Alarm_MasterEvent.sendCommand(ON)
+	]
+
+	// update the alarm display time    
+	Alarm_MasterTime.sendCommand(String::format("%02d", alarmTime.getDayOfMonth()))
+end
+
+rule "Mode Alarm_Master"
+	when
+		Item Alarm_Master received command
+	then
+		switch(receivedCommand) {
+			case OFF :
+			{
+				logInfo("VacanceManager", "Turned OFF Vacance Mode since it got disabled")
+				postUpdate(SalonRadModeSwitch, 2)
+				SalonModeChauff = "CONF"
+				postUpdate(ChambreRadModeSwitch, 2)
+				ChambreModeChauff = "CONF"
+				postUpdate(BureauRadModeSwitch, 2)	
+				BureauModeChauff = "CONF"
+				postUpdate(SdbRadModeSwitch, 3)	
+				SdbModeChauff = "AUTO"
+				postUpdate(SdbBalModeSwitch, 1)	
+				SdbBalModeChauff = "ON"
+				if (masterAlarmTime != null) {masterAlarmTime.cancel()}
+			}
+			case ON : 
+			{
+				postUpdate(SalonRadModeSwitch, 0)
+				SalonModeChauff = "OFF"
+				postUpdate(ChambreRadModeSwitch, 0)
+				ChambreModeChauff = "OFF"
+				postUpdate(BureauRadModeSwitch, 0)	
+				BureauModeChauff = "OFF"
+				postUpdate(SdbRadModeSwitch, 0)	
+				SdbModeChauff = "OFF"
+				postUpdate(SdbBalModeSwitch, 0)
+				SdbBalModeChauff = "OFF"		
+				
+				// work out when the alarm is to fire - start from midnight
+				var DateTime alarmTime = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
+			
+				// add the number of minutes selected
+				var int minutes = (Alarm_MasterTimeMins.state as DecimalType).intValue()
+				alarmTime = alarmTime.plusDays(minutes)
+
+				// update the alarm display time    
+				Alarm_MasterTime.sendCommand(String::format("%02d", alarmTime.getDayOfMonth()))
+				
+
+				logInfo("VacanceManager", "Turned ON Vacance Mode for day "+ minutes)
+
+				if (masterAlarmTime != null)
+					masterAlarmTime.cancel()
+				
+				// create a timer to execute the alarm at the specified time
+				masterAlarmTime = createTimer(now.plusDays(minutes)) [| 
+					if (Alarm_Master.state == ON) 
+						Alarm_MasterEvent.sendCommand(ON)
+				]							
+			}
+		}
+end
+
+
+rule "Master bedroom alarm"
+when
+	Item Alarm_MasterEvent received command ON
+then
+	logInfo("VacanceManager", "Turned OFF Vacance Mode since we reach the return date")
+	postUpdate(SalonRadModeSwitch, 2)
+	SalonModeChauff = "CONF"
+	postUpdate(ChambreRadModeSwitch, 2)
+	ChambreModeChauff = "CONF"
+	postUpdate(BureauRadModeSwitch, 2)	
+	BureauModeChauff = "CONF"
+	postUpdate(SdbRadModeSwitch, 3)	
+	SdbModeChauff = "AUTO"
+	postUpdate(SdbBalModeSwitch, 1)	
+	SdbBalModeChauff = "ON"
+	Alarm_Master.sendCommand(OFF)
+	// do your alarm stuff - turn on radio, dim up lights, start the coffee machine...
 end
 
 
