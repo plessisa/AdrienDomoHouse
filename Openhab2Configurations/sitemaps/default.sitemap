@@ -98,11 +98,11 @@ sitemap default label="Appart Camille Adrien"
 	}
 	
 	Frame label="System Status" {
-    	Text item=SalonLastUpdateSensor valuecolor=[SalonLastUpdateSensor>600="red", SalonLastUpdateSensor>240="orange"]
-    	Text item=ChambreLastUpdateSensor valuecolor=[ChambreLastUpdateSensor>600="red", ChambreLastUpdateSensor>240="orange"]
-    	Text item=BureauLastUpdateSensor valuecolor=[BureauLastUpdateSensor>600="red", BureauLastUpdateSensor>240="orange"]
-    	Text item=ConsoLastUpdateSensor valuecolor=[ConsoLastUpdateSensor>600="red", ConsoLastUpdateSensor>240="orange"]
-	    Text item=Weather_LastUpdateopenweather valuecolor=[Weather_LastUpdateopenweather>700="orange", Weather_LastUpdateopenweather>1400="red"]
+    	Text item=SalonLastUpdateSensor valuecolor=[>600="red", >240="orange"]
+    	Text item=ChambreLastUpdateSensor valuecolor=[>600="red", >240="orange"]
+    	Text item=BureauLastUpdateSensor valuecolor=[>600="red", >240="orange"]
+    	Text item=ConsoLastUpdateSensor valuecolor=[>600="red", >240="orange"]
+	    Text item=Weather_LastUpdateopenweather valuecolor=[>700="orange", >1400="red"]
 		Text label="Sensor Health" icon="settings" {
 			Frame label="Chambre" {
 				Default item=XiaomiAqaraTHPSensor_BatteryLevel2
