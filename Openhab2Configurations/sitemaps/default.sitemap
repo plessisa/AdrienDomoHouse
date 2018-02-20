@@ -98,7 +98,7 @@ sitemap default label="Appart Camille Adrien"
 	}
 	
 	Frame label="System Status" {
-    	Text item=SalonLastUpdateSensor valuecolor=[>600="red", >240="orange"]
+    	Text item=SalonLastUpdateSensor valuecolor=[>500="red", >240="orange"]
     	Text item=ChambreLastUpdateSensor valuecolor=[>600="red", >240="orange"]
     	Text item=BureauLastUpdateSensor valuecolor=[>600="red", >240="orange"]
     	Text item=ConsoLastUpdateSensor valuecolor=[>600="red", >240="orange"]
