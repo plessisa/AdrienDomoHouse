@@ -1,0 +1,102 @@
+Group All
+Group gAppart (All)
+Group A_Salon "Salon" (gAppart)
+Group A_Chambre "Chambre" (gAppart)
+Group A_Bureau "Bureau" (gAppart)
+Group A_Sdb "SDB" (gAppart)
+Group gChart (All)
+Group TempChart "TempChart" (gChart)
+Group ConsoSensorChart (gChart)
+Group ConsoChart (gChart)
+Group A_Salon_TempChart (gChart)
+Group A_Chambre_TempChart (gChart)
+Group A_Bureau_TempChart (gChart)
+Group A_Sdb_TempChart (gChart)
+Group A_Config "Configuration" (All)
+
+
+Number SalonTempSensor "Temperature Salon [%.1f °C]" <temperature> (A_Salon_TempChart) {mqtt="<[mymosquitto:/home/1/T/1:state:default]"}
+Number SalonTempSensorChartPeriod "Chart Period" (A_Salon)
+Number SalonHumiSensor "Humidite Salon [%.1f %%]" <temperature> (A_Salon) {mqtt="<[mymosquitto:/home/1/H/1:state:default]"}
+Number SalonMoveSensor "Presence Salon [%d]" <parents> (A_Salon) {mqtt="<[mymosquitto:/home/1/M/1:state:default]"}
+DateTime SalonLastUpdateSensor "Salon State [%1$ta %1$tr]"   
+Number SalonRadReport	"Radiateur Salon [%d]" <fire> (A_Salon_TempChart) {mqtt="<[mymosquitto:/home/5/R/1:state:default]"}
+Number SalonRadModeSwitch "Mode de chauffage Salon" <radiator> (A_Config)
+Switch SalonTempSwitch "Radiateur" (A_Salon) {mqtt=">[mymosquitto:/home/5/A/1:command:ON:1],>[mymosquitto:/home/5/A/1:command:OFF:0]"}
+
+Number ChambreTempSensor "Temperature Chambre [%.1f °C]" <temperature> (A_Chambre_TempChart) {mqtt="<[mymosquitto:/home/2/T/1:state:default]"}
+Number ChambreTempSensorChartPeriod "Chart Period" (A_Chambre)
+//Number ChambreHumiSensor "Humidite Chambre [%.1f %%]" <temperature> (A_Chambre) {mqtt="<[mymosquitto:/home/2/H/1:state:default]"}
+//Number ChambreMoveSensor "Presence" <"door-closed"> (A_Chambre) {mqtt="<[mymosquitto:/home/2/M/1:state:default]"}
+DateTime ChambreLastUpdateSensor "Chambre State [%1$ta %1$tr]"   
+Number ChambreRadReport	"Radiateur Chambre [%d]" <fire> (A_Chambre_TempChart) {mqtt="<[mymosquitto:/home/5/R/2:state:default]"}
+Number ChambreRadModeSwitch "Mode de chauffage Chambre" <radiator> (A_Config)
+Switch ChambreTempSwitch "Radiateur" (A_Chambre) {mqtt=">[mymosquitto:/home/5/A/2:command:ON:1],>[mymosquitto:/home/5/A/2:command:OFF:0]"}
+
+//Number BureauTempSensor "Temperature Bureau [%.1f °C]" <temperature> (A_Bureau_TempChart) {mqtt="<[mymosquitto:/home/3/T/1:state:default]"}
+Number BureauTempSensorChartPeriod "Chart Period" (A_Bureau)
+//Number BureauHumiSensor "Humidite Bureau [%.1f %%]" <temperature> (A_Bureau) {mqtt="<[mymosquitto:/home/3/H/1:state:default]"}
+//Number BureauMoveSensor "Presence" <"door-closed"> (A_Bureau) {mqtt="<[mymosquitto:/home/3/M/1:state:default]"}
+DateTime BureauLastUpdateSensor "Bureau State [%1$ta %1$tr]"   
+Number BureauRadReport	"Radiateur Bureau [%d]" <fire> (A_Bureau_TempChart) {mqtt="<[mymosquitto:/home/5/R/3:state:default]"}
+Number BureauRadModeSwitch "Mode de chauffage Bureau" <radiator> (A_Config)
+Switch BureauTempSwitch "Radiateur" (A_Bureau) {mqtt=">[mymosquitto:/home/5/A/3:command:ON:1],>[mymosquitto:/home/5/A/3:command:OFF:0]"}
+
+Number SdbRadReport	"Radiateur Sdb [%d]" <fire> (A_Sdb_TempChart) {mqtt="<[mymosquitto:/home/5/R/4:state:default]"}
+Number SdbRadModeSwitch "Mode de chauffage Sdb" <radiator> (A_Config)
+Switch SdbTempSwitch "Radiateur" (A_Sdb) {mqtt=">[mymosquitto:/home/5/A/4:command:ON:1],>[mymosquitto:/home/5/A/4:command:OFF:0]"}
+
+Number SdbBalReport	"Ballon Eau Chaude 1 [%d]" <fire> (A_Sdb_TempChart)
+Number SdbBalModeSwitch "Ballon Eau Chaude 2" <cistern> (A_Config)
+Switch SdbBalSwitch "Mod Ballon Eau Chaude" (A_Sdb) {mqtt=">[mymosquitto:/home/5/A/5:command:ON:1],>[mymosquitto:/home/5/A/5:command:OFF:0]"}
+
+
+Switch Alarm_Master "Master Alarm" <presence> (gAppart)
+Number Alarm_MasterTimeMins "Master Alarm" <clock> (gAppart)
+String Alarm_MasterTime "Master Alarm [%s]" <clock>
+Switch Alarm_MasterEvent "Master Alarm Event" <alarm> (gAppart)
+
+
+Number AppartConsoSensor "Conso inst. [%d VA]" <energy> (ConsoSensorChart) {mqtt="<[mymosquitto:/home/4/S/1:state:default]"}
+DateTime ConsoLastUpdateSensor "Conso State [%1$ta %1$tr]"   
+Number ConsoSensorChartPeriod "Chart Period" (gAppart)
+Number AppartHPSensor "HP [%d kWh]" <energy> (gAppart) {mqtt="<[mymosquitto:/home/4/P/1:state:default]"}
+Number AppartHCSensor "HC [%d kWh]" <energy> (gAppart) {mqtt="<[mymosquitto:/home/4/C/1:state:default]"}
+Number AppartHPConso "Daily HP [%d kWh]" <energy> (ConsoChart)
+Number AppartHCConso "Daily HC [%d kWh]" <energy> (ConsoChart)
+Number AppartConsoChartPeriod "Chart Period" (gAppart)
+
+/* NTP binding demo item */
+//DateTime    Date    "Date et Heure: [%1$tT %1$td/%1$tm/%1$tY]"  (All)   {channel="ntp:ntp:local:dateTime"} 
+
+/* Meteo item */
+Number	Weather_Temperatureopenweather	"Temperature Ext. openweather [%.1f °C]"	<temperature>	(A_Salon_TempChart, A_Chambre_TempChart, A_Bureau_TempChart, TempChart)	{channel="yahooweather:weather:Paris:temperature"}
+DateTime Weather_LastUpdateopenweather "Weather State [%1$ta %1$tr]"    
+
+Number	Weather_Humidity      	"Humidite Ext. [%d %%]"		<temperature>	(gAppart)	{channel="yahooweather:weather:Paris:humidity"}
+
+// Settings
+Number TargetedTempSalon "Temp. Salon [%d °C]" <temperature> (A_Config)
+Number TargetedTempChambre "Temp. Chambre [%d °C]" <temperature> (A_Config)
+Number TargetedTempBureau "Temp. Bureau [%d °C]" <temperature> (A_Config)
+
+Number AutoStartAM "Start AM [%d h]" <clock> (A_Config)
+Number AutoStopAM "Stop AM [%d h]" <clock> (A_Config)
+Number AutoStartPM "Start PM [%d h]" <clock> (A_Config)
+Number AutoStopPM "Stop PM [%d h]" <clock> (A_Config)
+
+Number SdbStartCamille "Start Camille [%d h]" <clock> (A_Config)
+Number SdbStartAdrien "Start Adrien [%d h]" <clock> (A_Config)
+Number SdbLenght "Length Sdb [%d]" <clock> (A_Config)
+
+//Switch Zwave1Switch "Z-Wave 1" {channel="zwave:device:zwavecontroler1:node5:switch_binary"}
+//Number Zwave1ConsoCur "Z-Wave 1 Current Conso [%.1f W]" {channel="zwave:device:zwavecontroler1:node5:meter_watts"}
+//Number Zwave1ConsoTot "Z-Wave 1 total Conso [%.2f KWh]" {channel="zwave:device:zwavecontroler1:node5:meter_kwh"}
+//Switch Zwave2Switch "Z-Wave 2" {channel="zwave:device:zwavecontroler1:node6:switch_binary"}
+//Number Zwave2ConsoCur "Z-Wave 2 Current Conso [%.1f W]" {channel="zwave:device:zwavecontroler1:node6:meter_watts"}
+//Number Zwave2ConsoTot "Z-Wave 2 total Conso [%.2f KWh]" {channel="zwave:device:zwavecontroler1:node6:meter_kwh"} 
+
+//Number	Weather_Temperatureopenweather	"Temperature Ext. openweather [%.1f °C]"	<temperature>	(A_Salon_TempChart, A_Chambre_TempChart, A_Bureau_TempChart, TempChart)	{weather="locationId=home3, type=temperature, property=current"}
+//Number	Weather_TemperatureWunderground	"Temperature Ext. Wunderground [%.1f °C]"	<temperature>	(TempChart)	{weather="locationId=home5, type=temperature, property=current"}
+//DateTime Weather_LastUpdateWunderground "Last Update [%1$ta %1$tr]"    
+//Number	Weather_Humidity      	"Humidite Ext. [%d %%]"		<temperature>	(gAppart)	{weather="locationId=home3, type=atmosphere, property=humidity"}

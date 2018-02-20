@@ -1,0 +1,19 @@
+// Configuration file for "mysql" persistence module
+
+// persistence strategies have a name and a definition and are referred to in the "Items" section
+Strategies {
+// for charts, we need a cron strategy
+everyMinute : "0 * * * * ?"
+every5Minute : "0 0/5 * * * ?"
+everyHour : "0 0 * * * ?"
+every6Hour : "0 0 0/6 * * ?"
+everyDay : "0 0 0 * * ?"
+}
+
+Items {
+* : strategy = everyDay
+A_Config* : strategy = everyChange, restoreOnStartup
+gAppart* : strategy = everyHour
+SalonMoveSensor : strategy = everyChange
+gChart* : strategy = everyUpdate
+}

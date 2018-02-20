@@ -1,24 +1,17 @@
-import org.openhab.core.library.types.*
-import org.openhab.core.persistence.*
-import org.openhab.model.script.actions.*
-import org.joda.time.*
+import org.joda.time.DateTime
 
 // Value to customize
 var int OpenWindowDeltaTemp = 2
 var int  OpenWindowDeltaTime = 5
  
-// heater window
+// Initialize value not no history found
 var int AutoStartAMInit = 5
 var int AutoStopAMInit = 9
 var int AutoStartPMInit = 18
 var int AutoStopPMInit = 23
-
-// heater sdb
 var int SdbStartCamilleInit = 6
 var int SdbStartAdrienInit = 8
 var int SdbLenghtInit = 1
-
-
 var int TempTargetedSalonInit = 200
 var int TempTargetedChambreInit = 190
 var int TempTargetedBureauInit = 190
@@ -34,17 +27,22 @@ var String SdbBalModeChauff = "UNKNOWN"
 var int HeaterTime = 0
 var int HeaterSdbTime = 0
 
-var DateTime SalonLastUpdateSensorTime = null
-var DateTime ChambreLastUpdateSensorTime = null
-var DateTime BureauLastUpdateSensorTime = null
-var DateTime ConsoLastUpdateSensorTime = null
-var DateTime WeatherLastUpdateSensorTime = null
+var int ButtonInProgress = 0
+var Timer timerHeat = null
 
-val org.eclipse.xtext.xbase.lib.Functions$Function6 TempSensorChanged = [
-    org.openhab.core.library.items.SwitchItem TempSwitch,
-    org.openhab.core.library.items.NumberItem  TempSensor,
+//var DateTime SalonLastUpdateSensorTime = null
+//var DateTime ChambreLastUpdateSensorTime = null
+//var DateTime BureauLastUpdateSensorTime = null
+//var DateTime ConsoLastUpdateSensorTime = null
+//var DateTime WeatherLastUpdateSensorTime = null
+
+val Functions$Function6<SwitchItem,NumberItem,String,NumberItem,String,Number,void> TempSensorChanged = [
+    SwitchItem TempSwitch,
+    NumberItem  TempSensor,
     String ModeChauff,
-    org.openhab.core.library.items.NumberItem TempTargeted, int HeaterTime, String LogName |
+    NumberItem TempTargeted, 
+    String LogName,
+	Number HeaterTime |
     
     var Number nTempTargeted = 0
     if(TempTargeted.state instanceof DecimalType) nTempTargeted = TempTargeted.state as DecimalType 
@@ -73,7 +71,6 @@ val org.eclipse.xtext.xbase.lib.Functions$Function6 TempSensorChanged = [
 	    if (MaxMoveSensor == 1) {
 	    	SomeoneIn = true;
 	    }
-	
 		if ((HeaterTime == 2) || ((HeaterTime == 3) && SomeoneIn)) {
 			if (TempSensor.state <= ((nTempTargeted/10) - 0.25)) {
 				logInfo(LogName, "The temperature ("+TempSensor.state+") is bellow " + ((nTempTargeted/10) - 0.25) + ", TimeRule="+HeaterTime+", PresenceRule="+SomeoneIn+". Let's turn ON")
@@ -91,11 +88,13 @@ val org.eclipse.xtext.xbase.lib.Functions$Function6 TempSensorChanged = [
 	} else {
 		logWarn(LogName, "We are in state that we don't handle: "+ModeChauff)			
 	}			
+	return null
 ]
 
-val org.eclipse.xtext.xbase.lib.Functions$Function4 SimpleChange = [
-    org.openhab.core.library.items.SwitchItem TempSwitch,
-    String ModeChauff, int HeaterTime, String LogName |
+val Functions$Function3<SwitchItem,String,String,void> SimpleChange = [
+    SwitchItem TempSwitch,
+    String ModeChauff, 
+    String LogName |
      
 	if (ModeChauff == "UNKNOWN") {
 		logWarn(LogName, "We don't know the state so do nothing")
@@ -107,12 +106,15 @@ val org.eclipse.xtext.xbase.lib.Functions$Function4 SimpleChange = [
 		sendCommand(TempSwitch,"ON")
 	} else {
 		logWarn(LogName, "We are in state that we don't handle: "+ModeChauff)			
-	}			
+	}
+	return null		
 ]
 
-val org.eclipse.xtext.xbase.lib.Functions$Function4 SdbHeaterChange = [
-    org.openhab.core.library.items.SwitchItem TempSwitch,
-    String ModeChauff, int HeaterSdbTime, String LogName |
+val Functions$Function4<SwitchItem,String,String,Number,void> SdbHeaterChange = [
+    SwitchItem TempSwitch,
+    String ModeChauff, 
+    String LogName,
+	Number HeaterSdbTime |
      
 	if (ModeChauff == "UNKNOWN") {
 		logWarn(LogName, "We don't know the state so do nothing")
@@ -134,14 +136,15 @@ val org.eclipse.xtext.xbase.lib.Functions$Function4 SdbHeaterChange = [
 		}
 	} else {
 		logWarn(LogName, "We are in state that we don't handle: "+ModeChauff)			
-	}			
+	}	
+	return null		
 ]
 
 rule "Initialize the system"
 	when 
 		System started
 	then
-		if (SalonRadModeSwitch.previousState != null) {
+		if (SalonRadModeSwitch.previousState !== null) {
 			postUpdate(SalonRadModeSwitch, SalonRadModeSwitch.previousState.getState())
 		}
 		switch(SalonRadModeSwitch.state) {
@@ -151,10 +154,10 @@ rule "Initialize the system"
 			case 3 : SalonModeChauff = "AUTO"
 			default: SalonModeChauff = "OFF"
 		}
-		TempSensorChanged.apply(SalonTempSwitch, SalonTempSensor, SalonModeChauff, TargetedTempSalon, HeaterTime, "TempManagerSalon")
-		logInfo("TempManagerSalon", "Initialize the mode to " + SalonModeChauff)
+		TempSensorChanged.apply(SalonTempSwitch, SalonTempSensor, SalonModeChauff, TargetedTempSalon, "TempManagerSalon", HeaterTime)
+		logInfo("InitDefaultValue", "Initialize the SalonModeChauff mode to " + SalonModeChauff)
 		
-		if (ChambreRadModeSwitch.previousState != null) {
+		if (ChambreRadModeSwitch.previousState !== null) {
 			postUpdate(ChambreRadModeSwitch, ChambreRadModeSwitch.previousState.getState())	
 		}
 		switch(ChambreRadModeSwitch.state) {
@@ -164,10 +167,10 @@ rule "Initialize the system"
 			case 3 : ChambreModeChauff = "AUTO"
 			default: ChambreModeChauff = "OFF"
 		}
-		TempSensorChanged.apply(ChambreTempSwitch, ChambreTempSensor, ChambreModeChauff, TargetedTempChambre, HeaterTime, "TempManagerChambre")
-		logInfo("TempManagerChambre", "Initialize the mode to " + ChambreModeChauff)
+		TempSensorChanged.apply(ChambreTempSwitch, XiaomiAqaraTHPSensor_Temperature2, ChambreModeChauff, TargetedTempChambre, "TempManagerChambre", HeaterTime)
+		logInfo("InitDefaultValue", "Initialize the ChambreModeChauff mode to " + ChambreModeChauff)
 		
-		if (BureauRadModeSwitch.previousState != null) {
+		if (BureauRadModeSwitch.previousState !== null) {
 			postUpdate(BureauRadModeSwitch, BureauRadModeSwitch.previousState.getState())	
 		}
 		switch(BureauRadModeSwitch.state) {
@@ -177,10 +180,10 @@ rule "Initialize the system"
 			case 3 : BureauModeChauff = "AUTO"
 			default: BureauModeChauff = "OFF"
 		}
-		TempSensorChanged.apply(BureauTempSwitch, BureauTempSensor, BureauModeChauff, TargetedTempBureau, HeaterTime, "TempManagerBureau")
-		logInfo("TempManagerBureau", "Initialize the mode to " + BureauModeChauff)
+		TempSensorChanged.apply(BureauTempSwitch, XiaomiAqaraTHPSensor_Temperature, BureauModeChauff, TargetedTempBureau, "TempManagerBureau", HeaterTime)
+		logInfo("InitDefaultValue", "Initialize the BureauModeChauff mode to " + BureauModeChauff)
 		
-		if (SdbRadModeSwitch.previousState != null) {
+		if (SdbRadModeSwitch.previousState !== null) {
 			postUpdate(SdbRadModeSwitch, SdbRadModeSwitch.previousState.getState())	
 		}
 		switch(SdbRadModeSwitch.state) {
@@ -190,10 +193,10 @@ rule "Initialize the system"
 			case 3 : SdbModeChauff = "AUTO"
 			default: SdbModeChauff = "OFF"
 		}
-		SdbHeaterChange.apply(SdbTempSwitch, SdbModeChauff, HeaterSdbTime, "TempManagerSdb")
-		logInfo("TempManagerSdb", "Initialize the mode to " + SdbModeChauff)
+		SdbHeaterChange.apply(SdbTempSwitch, SdbModeChauff, "TempManagerSdb",HeaterSdbTime)
+		logInfo("InitDefaultValue", "Initialize the SdbModeChauff mode to " + SdbModeChauff)
 		
-		if (SdbBalModeSwitch.previousState != null) {
+		if (SdbBalModeSwitch.previousState !== null) {
 			postUpdate(SdbBalModeSwitch, SdbBalModeSwitch.previousState.getState())	
 		}
 		switch(SdbBalModeSwitch.state) {
@@ -203,49 +206,54 @@ rule "Initialize the system"
 			case 3 : SdbBalModeChauff = "AUTO"
 			default: SdbBalModeChauff = "OFF"
 		}
-		SimpleChange.apply(SdbBalSwitch, SdbBalModeChauff, HeaterTime, "TempManagerSdbBal")
-		logInfo("TempManagerSdbBal", "Initialize the mode to " + SdbBalModeChauff)
+		SimpleChange.apply(SdbBalSwitch, SdbBalModeChauff, "TempManagerSdbBal")
+		logInfo("InitDefaultValue", "Initialize the SdbBalModeChauff mode to " + SdbBalModeChauff)
 		
-		if (Alarm_Master.previousState != null) {
+		if (Alarm_Master.previousState !== null) {
 			postUpdate(Alarm_Master, Alarm_Master.previousState.getState())	
 		}
-		logInfo("TempManagerSdbBal", "Initialize the mode to " + Alarm_Master)
+		logInfo("InitDefaultValue", "Initialize the Alarm_Master mode to " + Alarm_Master.state)
 		
 		
-		if (TargetedTempSalon.previousState != null) {
+		if (TargetedTempSalon.previousState !== null) {
 			postUpdate(TargetedTempSalon, TargetedTempSalon.previousState.getState())
 		} else {
 			postUpdate(TargetedTempSalon, TempTargetedSalonInit)
 		}
-		logInfo("TempManagerBureau", "Initialize Temperature salon " + TargetedTempSalon.state)
-		if (TargetedTempChambre.previousState != null) {
+		logInfo("InitDefaultValue", "Initialize Temperature salon " + TargetedTempSalon.state)
+		if (TargetedTempChambre.previousState !== null) {
 			postUpdate(TargetedTempChambre, TargetedTempChambre.previousState.getState())
 		} else {
 			postUpdate(TargetedTempChambre, TempTargetedChambreInit)
 		}
-		logInfo("TempManagerBureau", "Initialize Temperature chambre " + TargetedTempChambre.state)
-		if (TargetedTempBureau.previousState != null) {
+		logInfo("InitDefaultValue", "Initialize Temperature chambre " + TargetedTempChambre.state)
+		if (TargetedTempBureau.previousState !== null) {
 			postUpdate(TargetedTempBureau, TargetedTempBureau.previousState.getState())
 		} else {
 			postUpdate(TargetedTempBureau, TempTargetedBureauInit)
 		}
-		logInfo("TempManagerBureau", "Initialize Temperature bureau " + TargetedTempBureau.state)
+		logInfo("InitDefaultValue", "Initialize Temperature bureau " + TargetedTempBureau.state)	
+		//if (SdbBalReport.previousState !== null) {
+		//	postUpdate(SdbBalReport, SdbBalReport.previousState.getState())
+		//}
+		postUpdate(SdbBalReport, 0)
+		logInfo("InitDefaultValue", "Initialize Ballon report: " + SdbBalReport.state)
 		
 		
-		if(AutoStartAM.previousState != null) {postUpdate(AutoStartAM, AutoStartAM.previousState.getState())} else {postUpdate(AutoStartAM, AutoStartAMInit)}      
-		logInfo("TempManagerBureau", "Initialize Start AM " + AutoStartAM.state)
-		if(AutoStopAM.previousState != null) {postUpdate(AutoStopAM, AutoStopAM.previousState.getState())} else {postUpdate(AutoStopAM, AutoStopAMInit)}      
-		logInfo("TempManagerBureau", "Initialize Stop AM " + AutoStopAM.state)
-		if(AutoStartPM.previousState != null) {postUpdate(AutoStartPM, AutoStartPM.previousState.getState())} else {postUpdate(AutoStartPM, AutoStartPMInit)}      
-		logInfo("TempManagerBureau", "Initialize Start PM " + AutoStartPM.state)
-		if(AutoStopPM.previousState != null) {postUpdate(AutoStopPM, AutoStopPM.previousState.getState())} else {postUpdate(AutoStopPM, AutoStopPMInit)}      	
-		logInfo("TempManagerBureau", "Initialize Stop PM " + AutoStopPM.state)		
-		if(SdbStartCamille.previousState != null) {postUpdate(SdbStartCamille, SdbStartCamille.previousState.getState())} else {postUpdate(SdbStartCamille, SdbStartCamilleInit)}      	
-		logInfo("TempManagerBureau", "Initialize Camille Sdb " + SdbStartCamille.state)		
-		if(SdbStartAdrien.previousState != null) {postUpdate(SdbStartAdrien, SdbStartAdrien.previousState.getState())} else {postUpdate(SdbStartAdrien, SdbStartAdrienInit)}      	
-		logInfo("TempManagerBureau", "Initialize Adrien Sdb " + SdbStartAdrien.state)		
-		if(SdbLenght.previousState != null) {postUpdate(SdbLenght, SdbLenght.previousState.getState())} else {postUpdate(SdbLenght, SdbLenghtInit)}      	
-		logInfo("TempManagerBureau", "Initialize Lenght Sdb " + SdbLenght.state)		
+		if(AutoStartAM.previousState !== null) {postUpdate(AutoStartAM, AutoStartAM.previousState.getState())} else {postUpdate(AutoStartAM, AutoStartAMInit)}      
+		logInfo("InitDefaultValue", "Initialize Start AM " + AutoStartAM.state)
+		if(AutoStopAM.previousState !== null) {postUpdate(AutoStopAM, AutoStopAM.previousState.getState())} else {postUpdate(AutoStopAM, AutoStopAMInit)}      
+		logInfo("InitDefaultValue", "Initialize Stop AM " + AutoStopAM.state)
+		if(AutoStartPM.previousState !== null) {postUpdate(AutoStartPM, AutoStartPM.previousState.getState())} else {postUpdate(AutoStartPM, AutoStartPMInit)}      
+		logInfo("InitDefaultValue", "Initialize Start PM " + AutoStartPM.state)
+		if(AutoStopPM.previousState !== null) {postUpdate(AutoStopPM, AutoStopPM.previousState.getState())} else {postUpdate(AutoStopPM, AutoStopPMInit)}      	
+		logInfo("InitDefaultValue", "Initialize Stop PM " + AutoStopPM.state)		
+		if(SdbStartCamille.previousState !== null) {postUpdate(SdbStartCamille, SdbStartCamille.previousState.getState())} else {postUpdate(SdbStartCamille, SdbStartCamilleInit)}      	
+		logInfo("InitDefaultValue", "Initialize Camille Sdb " + SdbStartCamille.state)		
+		if(SdbStartAdrien.previousState !== null) {postUpdate(SdbStartAdrien, SdbStartAdrien.previousState.getState())} else {postUpdate(SdbStartAdrien, SdbStartAdrienInit)}      	
+		logInfo("InitDefaultValue", "Initialize Adrien Sdb " + SdbStartAdrien.state)		
+		if(SdbLenght.previousState !== null) {postUpdate(SdbLenght, SdbLenght.previousState.getState())} else {postUpdate(SdbLenght, SdbLenghtInit)}      	
+		logInfo("InitDefaultValue", "Initialize Lenght Sdb " + SdbLenght.state)		
 		
 		///////////////////// JUST A COPY OF THE TIME RULE
        	// Prepare the timer
@@ -267,11 +275,8 @@ rule "Initialize the system"
              
         var DateTime TimeDay = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
         var DateTime StartTimeAM = TimeDay.plusHours(nAutoStartAM)
-        //var DateTime EndTimeAM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
         var DateTime EndTimeAM = TimeDay.plusHours(nAutoStopAM)
-        //var DateTime StartTimePM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
         var DateTime StartTimePM = TimeDay.plusHours(nAutoStartPM)
-        //var DateTime EndTimePM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
         var DateTime EndTimePM = TimeDay.plusHours(nAutoStopPM)
         var DateTime StartSdbCamille = TimeDay.plusHours(nSdbStartCamille)
         var DateTime StopSdbCamille = StartSdbCamille.plusHours(nSdbLenght)
@@ -314,11 +319,11 @@ rule "Initialize the system"
         }
 		//////////////////////////////////////////////////
 		
-		TempSensorChanged.apply(SalonTempSwitch, SalonTempSensor, SalonModeChauff, TargetedTempSalon, HeaterTime, "TempManagerSalon")
-		TempSensorChanged.apply(ChambreTempSwitch, ChambreTempSensor, ChambreModeChauff, TargetedTempChambre, HeaterTime, "TempManagerChambre")
-		TempSensorChanged.apply(BureauTempSwitch, BureauTempSensor, BureauModeChauff, TargetedTempBureau, HeaterTime, "TempManagerBureau")
-		SdbHeaterChange.apply(SdbTempSwitch, SdbModeChauff, HeaterSdbTime, "TempManagerSdb")
-		SimpleChange.apply(SdbBalSwitch, SdbBalModeChauff, HeaterTime, "TempManagerSdbBal")
+		TempSensorChanged.apply(SalonTempSwitch, SalonTempSensor, SalonModeChauff, TargetedTempSalon, "TempManagerSalon", HeaterTime)
+		TempSensorChanged.apply(ChambreTempSwitch, XiaomiAqaraTHPSensor_Temperature2, ChambreModeChauff, TargetedTempChambre, "TempManagerChambre", HeaterTime)
+		TempSensorChanged.apply(BureauTempSwitch, XiaomiAqaraTHPSensor_Temperature, BureauModeChauff, TargetedTempBureau, "TempManagerBureau", HeaterTime)
+		SdbHeaterChange.apply(SdbTempSwitch, SdbModeChauff, "TempManagerSdb",HeaterSdbTime)
+		SimpleChange.apply(SdbBalSwitch, SdbBalModeChauff, "TempManagerSdbBal")
 		
 end
 
@@ -326,13 +331,13 @@ rule "Temperature Salon change"
 	when
 		Item SalonTempSensor changed
 	then
-		SalonLastUpdateSensorTime = now
+//		SalonLastUpdateSensorTime = now
 	  	postUpdate(SalonLastUpdateSensor, new DateTimeType())
-		if (SalonTempSensor.deltaSince(now.minusMinutes(OpenWindowDeltaTime)) > OpenWindowDeltaTemp) {
+		if (SalonTempSensor.deltaSince(now.minusMinutes(OpenWindowDeltaTime)) as Number > OpenWindowDeltaTemp) {
 			logWarn("TempManagerSalon", "Temperature changed more than "+ OpenWindowDeltaTemp +" C in "+OpenWindowDeltaTime+" mins. Stop heater")
 			sendCommand(SalonTempSwitch,"OFF")
 		} else {
-			TempSensorChanged.apply(SalonTempSwitch, SalonTempSensor, SalonModeChauff, TargetedTempSalon, HeaterTime, "TempManagerSalon")
+			TempSensorChanged.apply(SalonTempSwitch, SalonTempSensor, SalonModeChauff, TargetedTempSalon, "TempManagerSalon", HeaterTime)
 		}
 end
 
@@ -340,34 +345,41 @@ rule "Somone in change"
 	when
 		Item SalonMoveSensor changed
 	then
-		Zwave1Switch.sendCommand(ON)
+		//logInfo("MoveSensor", "We moved, Start Led and TV")
+		ZWaveNode5FGWP102MeteredWallPlugSwitch_Switch.sendCommand(ON)
+
+		if(HeaterTime == 1 && XiaomiMiSmartHomeGateway_Brightness.state == 0)
+		{
+			sendCommand("XiaomiMiSmartHomeGateway_Color", "240,100,50") //HSL
+			sendCommand("XiaomiMiSmartHomeGateway_Brightness", "50")
+		}
 end
 
 rule "Temperature Chambre change"
 	when
-		Item ChambreTempSensor changed
+		Item XiaomiAqaraTHPSensor_Temperature2 changed
 	then
-		ChambreLastUpdateSensorTime = now
+//		ChambreLastUpdateSensorTime = now
 		postUpdate(ChambreLastUpdateSensor, new DateTimeType())
-		if (ChambreTempSensor.deltaSince(now.minusMinutes(OpenWindowDeltaTime)) > OpenWindowDeltaTemp) {
+		if (XiaomiAqaraTHPSensor_Temperature2.deltaSince(now.minusMinutes(OpenWindowDeltaTime)) as Number > OpenWindowDeltaTemp) {
 			logWarn("TempManagerChambre", "Temperature changed more than "+ OpenWindowDeltaTemp +" C in "+OpenWindowDeltaTime+" mins. Stop heater")
 			sendCommand(ChambreTempSwitch,"OFF")
 		} else {
-			TempSensorChanged.apply(ChambreTempSwitch, ChambreTempSensor, ChambreModeChauff, TargetedTempChambre, HeaterTime, "TempManagerChambre")
+			TempSensorChanged.apply(ChambreTempSwitch, XiaomiAqaraTHPSensor_Temperature2, ChambreModeChauff, TargetedTempChambre, "TempManagerChambre", HeaterTime)
 		}
 end
 
 rule "Temperature Bureau change"
 	when
-		Item BureauTempSensor changed
+		Item XiaomiAqaraTHPSensor_Temperature changed
 	then
-		BureauLastUpdateSensorTime = now
+//		BureauLastUpdateSensorTime = now
 		postUpdate(BureauLastUpdateSensor, new DateTimeType())
-		if (BureauTempSensor.deltaSince(now.minusMinutes(OpenWindowDeltaTime)) > OpenWindowDeltaTemp) {
+		if (XiaomiAqaraTHPSensor_Temperature.deltaSince(now.minusMinutes(OpenWindowDeltaTime)) as Number > OpenWindowDeltaTemp) {
 			logWarn("TempManagerBureau", "Temperature changed more than "+ OpenWindowDeltaTemp +" C in "+OpenWindowDeltaTime+" mins. Stop heater")
 			sendCommand(BureauTempSwitch,"OFF")
 		} else {
-			TempSensorChanged.apply(BureauTempSwitch, BureauTempSensor, BureauModeChauff, TargetedTempBureau, HeaterTime, "TempManagerBureau")
+			TempSensorChanged.apply(BureauTempSwitch, XiaomiAqaraTHPSensor_Temperature, BureauModeChauff, TargetedTempBureau, "TempManagerBureau", HeaterTime)
 		}
 end
 
@@ -375,7 +387,7 @@ rule "Records last weather update time"
 when
   Item Weather_Temperatureopenweather received update
 then
-	WeatherLastUpdateSensorTime = now
+//	WeatherLastUpdateSensorTime = now
 	postUpdate(Weather_LastUpdateopenweather, new DateTimeType())
 end
 
@@ -383,7 +395,7 @@ rule "Records last AppartConsoSensor update time"
 when
   Item AppartConsoSensor received update
 then
-	ConsoLastUpdateSensorTime = now
+//	ConsoLastUpdateSensorTime = now
   	postUpdate(ConsoLastUpdateSensor, new DateTimeType())
 end
 
@@ -399,7 +411,7 @@ rule "Mode Chauffage Salon"
 			case 3 : SalonModeChauff = "AUTO"
 		}
 		logInfo("TempManagerSalon", "We moved the mode to " + SalonModeChauff+". Temp is " + SalonTempSensor.state)
-		TempSensorChanged.apply(SalonTempSwitch, SalonTempSensor, SalonModeChauff, TargetedTempSalon, HeaterTime, "TempManagerSalon")
+		TempSensorChanged.apply(SalonTempSwitch, SalonTempSensor, SalonModeChauff, TargetedTempSalon, "TempManagerSalon", HeaterTime)
 end
 
 rule "Mode Chauffage Chambre"
@@ -412,8 +424,8 @@ rule "Mode Chauffage Chambre"
 			case 2 : ChambreModeChauff = "CONF"
 			case 3 : ChambreModeChauff = "AUTO"
 		}
-		logInfo("TempManagerChambre", "We moved the mode to " + ChambreModeChauff+". Temp is " + ChambreTempSensor.state)
-		TempSensorChanged.apply(ChambreTempSwitch, ChambreTempSensor, ChambreModeChauff, TargetedTempChambre, HeaterTime, "TempManagerChambre")
+		logInfo("TempManagerChambre", "We moved the mode to " + ChambreModeChauff+". Temp is " + XiaomiAqaraTHPSensor_Temperature2.state)
+		TempSensorChanged.apply(ChambreTempSwitch, XiaomiAqaraTHPSensor_Temperature2, ChambreModeChauff, TargetedTempChambre, "TempManagerChambre", HeaterTime)
 		
 end
 
@@ -427,8 +439,8 @@ rule "Mode Chauffage Bureau"
 			case 2 : BureauModeChauff = "CONF"
 			case 3 : BureauModeChauff = "AUTO"
 		}
-		logInfo("TempManagerBureau", "We moved the mode to " + BureauModeChauff+". Temp is " + BureauTempSensor.state)
-		TempSensorChanged.apply(BureauTempSwitch, BureauTempSensor, BureauModeChauff, TargetedTempBureau, HeaterTime, "TempManagerBureau")
+		logInfo("TempManagerBureau", "We moved the mode to " + BureauModeChauff+". Temp is " + XiaomiAqaraTHPSensor_Temperature.state)
+		TempSensorChanged.apply(BureauTempSwitch, XiaomiAqaraTHPSensor_Temperature, BureauModeChauff, TargetedTempBureau, "TempManagerBureau", HeaterTime)
 		
 end
 
@@ -442,7 +454,7 @@ rule "Mode Chauffage Sdb"
 			case 3 : SdbModeChauff = "AUTO"
 		}
 		logInfo("TempManagerSdb", "We moved the mode to " + SdbModeChauff+".")
-		SdbHeaterChange.apply(SdbTempSwitch, SdbModeChauff, HeaterSdbTime, "TempManagerSdb")
+		SdbHeaterChange.apply(SdbTempSwitch, SdbModeChauff, "TempManagerSdb",HeaterSdbTime)
 		
 end
 
@@ -457,7 +469,7 @@ rule "Mode Chauffage Ballon Eau chaude"
 			case 3 : SdbBalModeChauff = "AUTO"
 		}
 		logInfo("TempManagerSdbBal", "We moved the mode to " + SdbBalModeChauff+".")
-		SimpleChange.apply(SdbBalSwitch, SdbBalModeChauff, HeaterTime, "TempManagerSdbBal")
+		SimpleChange.apply(SdbBalSwitch, SdbBalModeChauff, "TempManagerSdbBal")
 		
 end
 
@@ -484,11 +496,8 @@ rule "Check the time it's now"
              
         var DateTime TimeDay = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
         var DateTime StartTimeAM = TimeDay.plusHours(nAutoStartAM)
-        //var DateTime EndTimeAM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
         var DateTime EndTimeAM = TimeDay.plusHours(nAutoStopAM)
-        //var DateTime StartTimePM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
         var DateTime StartTimePM = TimeDay.plusHours(nAutoStartPM)
-        //var DateTime EndTimePM = parse(now.getYear() + "-" + now.getMonthOfYear() + "-" + now.getDayOfMonth() + "T00:00")
         var DateTime EndTimePM = TimeDay.plusHours(nAutoStopPM)
         var DateTime StartSdbCamille = TimeDay.plusHours(nSdbStartCamille)
         var DateTime StopSdbCamille = StartSdbCamille.plusHours(nSdbLenght)
@@ -525,38 +534,56 @@ rule "Check the time it's now"
 		logInfo("AutoManager", "It's NOT Sdb Time.")
         	HeaterSdbTime = 0
         }
-		SdbHeaterChange.apply(SdbTempSwitch, SdbModeChauff, HeaterSdbTime, "TempManagerSdb")
+		SdbHeaterChange.apply(SdbTempSwitch, SdbModeChauff, "TempManagerSdb",HeaterSdbTime)
 		
-	    var Number MaxMoveSensor = SalonMoveSensor.maximumSince(now.minusHours(1)).state as DecimalType
-	    if (MaxMoveSensor == 0) {
-	    	Zwave1Switch.sendCommand(OFF)
+	    var Number MaxMoveSensor1 = SalonMoveSensor.maximumSince(now.minusMinutes(5)).state as DecimalType
+	    var Number MaxMoveSensorBis = SalonMoveSensor.maximumSince(now.minusHours(2)).state as DecimalType
+	    var Number MaxMoveSensor2 = SalonMoveSensor.maximumSince(now.minusHours(3)).state as DecimalType
+		logInfo("AutoManager", "Timeout for LED:"+MaxMoveSensor1+" TV:"+MaxMoveSensorBis+" Bureau:"+MaxMoveSensor2)
+	    if (MaxMoveSensor1 == 0) {
+			if(XiaomiMiSmartHomeGateway_Brightness.state != 99){
+		    	sendCommand("XiaomiMiSmartHomeGateway_Brightness", "0")
+		    }
 	    }
+	    if (MaxMoveSensorBis == 0) {
+	    	ZWaveNode5FGWP102MeteredWallPlugSwitch_Switch.sendCommand(OFF)
+	    }
+	    if (MaxMoveSensor2 == 0) {
+	   		ZWaveNode6FGWP102MeteredWallPlugSwitch_Switch.sendCommand(OFF)
+	    }	    
 	
 end
 
-rule "Check the daily conso"
+rule "Store the daily conso"
     when
         Time cron "0 0 0 * * ?"
     then
-    	AppartHPConso.postUpdate(AppartHPSensor.deltaSince(now.minusHours(24)))
-		AppartHCConso.postUpdate(AppartHCSensor.deltaSince(now.minusHours(24)))		
+    	postUpdate(AppartHPConso, AppartHPSensor.deltaSince(now.minusHours(24)) as Number)
+		postUpdate(AppartHCConso, AppartHCSensor.deltaSince(now.minusHours(24)) as Number)		
 end
 
-rule "Check the bal state"
+
+rule "Check ballon state"
     when
         Time cron "0 0 * * * ?"
     then
-    	logInfo("Reset Bal", "Check On/Off on Bal: "+ SdbBalSwitch.state)
+    	logInfo("Reset Ballon", "Force On/Off on Ballon: "+ SdbBalSwitch.state)
 		if (SdbBalModeChauff == "ON") {
-			// logInfo("Reset Bal", "Do On/Off on Bal: "+ SdbBalSwitch.state)
-			// sendCommand(SdbBalSwitch,"OFF")
-			//Thread::sleep(10000)
 			sendCommand(SdbBalSwitch,"ON")
-			logInfo("Reset Bal", "Completed On on Bal: "+ SdbBalSwitch.state)
 		} else {
-			sendCommand(SdbBalSwitch,"OFF")
-			logInfo("Reset Bal", "Completed Off on Bal: "+ SdbBalSwitch.state)			
+			sendCommand(SdbBalSwitch,"OFF")	
 		}
+		if (now.getHourOfDay()==23 || now.getHourOfDay()<5)
+		{
+			var Number MaxMConso = AppartConsoSensor.maximumSince(now.minusMinutes(30)).state as DecimalType
+		    if (MaxMConso > 2200) {
+		    	logInfo("Reset Ballon", "Found more than "+MaxMConso+" / 2200")
+	    		SdbBalReport.postUpdate(1)
+	    	} else {
+		    	logInfo("Reset Ballon", "Found less than "+MaxMConso+" / 2200")
+	    		SdbBalReport.postUpdate(0)    		
+	    	}	    	
+    	}
 end
 
 rule "Master alarm time"
@@ -565,7 +592,7 @@ when
 then
 	var int minutes = (Alarm_MasterTimeMins.state as DecimalType).intValue()
 
-	if (masterAlarmTime != null)
+	if (masterAlarmTime !== null)
 		masterAlarmTime.cancel()
 
 	// work out when the alarm is to fire - start from midnight
@@ -602,7 +629,7 @@ rule "Mode Alarm_Master"
 				SdbModeChauff = "AUTO"
 				postUpdate(SdbBalModeSwitch, 1)	
 				SdbBalModeChauff = "ON"
-				if (masterAlarmTime != null) {masterAlarmTime.cancel()}
+				if (masterAlarmTime !== null) {masterAlarmTime.cancel()}
 			}
 			case ON : 
 			{
@@ -630,7 +657,7 @@ rule "Mode Alarm_Master"
 
 				logInfo("VacanceManager", "Turned ON Vacance Mode for day "+ minutes)
 
-				if (masterAlarmTime != null)
+				if (masterAlarmTime !== null)
 					masterAlarmTime.cancel()
 				
 				// create a timer to execute the alarm at the specified time
@@ -663,203 +690,75 @@ then
 end
 
 
-/* 
- * 
- * receivedCommand
-
-
-/*
-rule "Initialize heating states"
-	when 
-		System started
-	then
-		Heating?.members.forEach(heating|
-			postUpdate(heating, if(Math::random > 0.8) ON else OFF)
-		)
-		postUpdate(Temperature_Setpoint, 22)
-end
-* 
-* 
- 
-var Number counter = 1
-var Timer timer = null
-
-/**
- * This is a demo rule which simulates a real dimmer by reacting to increase/decrease commands 
- * and posting an updated state on the bus 
-
-rule "Dimmed Light"
-	when
-		Item DimmedLight received command
-	then
-		var Number percent = 0
-		if(DimmedLight.state instanceof DecimalType) percent = DimmedLight.state as DecimalType 
-			
-		if(receivedCommand==INCREASE) percent = percent + 5
-		if(receivedCommand==DECREASE) percent = percent - 5
-
-		if(percent<0)   percent = 0
-		if(percent>100) percent = 100
-		postUpdate(DimmedLight, percent);
-end
-
-/**
- * This rule demonstrates how a NumberItem can be used to easily control the local sound system.
- * A selection widget in the UI provides easy access for this
-
-rule "Select Radio Station"
-	when
-		Item Radio_Station received command
-	then
-		switch(receivedCommand) {
-			case 0 : playStream(null)
-			case 1 : playStream("http://metafiles.gl-systemhaus.de/hr/hr3_2.m3u")
-			case 2 : playStream("http://mp3-live.swr3.de/swr3_m.m3u")
-			case 3 : playStream("http://edge.live.mp3.mdn.newmedia.nacamar.net/radioffh/livestream.mp3.m3u")
-		}
-end
-
-/**
- * This rules controls the volume on the local host
-
-rule "Volume control"
-	when
-		Item Volume received command
-	then
-		if(receivedCommand instanceof PercentType) {
-			setMasterVolume(receivedCommand as PercentType)
-		} else {
-			if(receivedCommand==INCREASE) increaseMasterVolume(20)
-			if(receivedCommand==DECREASE) decreaseMasterVolume(20)	
-		}
-		postUpdate(Volume, masterVolume * 100)
-end
-
-/**
- * The following rules help initializing the demo items with some helpful states.
-
-rule "Initialize light states"
-	when
-		System started
-	then
-		Lights?.members.forEach(light|
-			postUpdate(light, if(Math::random > 0.7) ON else OFF)
-		)
-end
-
-rule "Initialize heating states"
-	when 
-		System started
-	then
-		Heating?.members.forEach(heating|
-			postUpdate(heating, if(Math::random > 0.8) ON else OFF)
-		)
-		postUpdate(Temperature_Setpoint, 22)
-end
-
-rule "Initialize contact states"
-	when 
-		System started
-	then
-		Windows?.members.forEach(window|
-			postUpdate(window, if(Math::random > 0.5) OPEN else CLOSED)
-		)
-end
-
-rule "Initialize Location"
-	when 
-		System started
-	then
-		DemoLocation.postUpdate(new PointType("52.5200066,13.4049540"))
-end
-
-rule "Set random room temperatures"
-	when 
-		System started or
-		Time cron "0 0/5 * * * ?"
-	then
-		Temperature?.members.forEach(temperature|
-			postUpdate(temperature, 20.0 + (25.0 - (Math::random * 50.0).intValue) / 10.0)
-		)
-end
-
-rule "Update max and min temperatures"
+rule "Xiaomi Switch"
 when
-	Item Weather_Temperature changed or
-	Time cron "0 0 0 * * ?" or
-	System started
-then	
-	postUpdate(Weather_Temp_Max, Weather_Temperature.maximumSince(now.toDateMidnight).state)
-	postUpdate(Weather_Temp_Min, Weather_Temperature.minimumSince(now.toDateMidnight).state)
-	logInfo("Weather", "Temperature evolved of " + Weather_Temperature.deltaSince(now.minusMinutes(2)) + " degrees.")
-end
-
-/** shows how to use sensor values from the past
-rule "Persistence Demo"
-when
-	Time cron "0 * * * * ?"
-then	
-	if(Weather_Temperature.changedSince(now.minusMinutes(1))) {
-		logInfo("PersistenceDemo", "2 minutes ago, the temperature was " + Weather_Temperature.historicState(now.minusMinutes(2)) + " degrees.")
-	}
-end
-
-/** 
- * shows how to check recent switch states - very helpful to avoid executing something too often, just
- * because somebody presses a button too often (e.g. sending a notification, if the doorbell button is pressed)
-
-rule "Persistence Demo 2"
-when
-	Item DemoSwitch received command
+    Channel "mihome:sensor_switch_aq2:158d0002133fce:button" triggered
 then
-	if(!DemoSwitch.changedSince(now.minusSeconds(5))) {
-		logInfo("PersistenceDemo2", "You did not press this button during the last 5 seconds!")
-	}
+    var actionName = receivedEvent.getEvent() //"SHORT_PRESSED" //
+    switch(actionName) 
+    {
+        case "SHORT_PRESSED": 
+        {
+        	logInfo("XiaomiSwitch", "SHORT_PRESSED B1 Begin")
+        	sendCommand("XiaomiMiSmartHomeGateway_Color", "0,100,50") // HSL
+        	sendCommand("XiaomiMiSmartHomeGateway_Brightness", "99")      	
+			postUpdate(BureauRadModeSwitch, 1)	
+			BureauModeChauff = "ON"
+			postUpdate(SdbRadModeSwitch, 1)	
+			SdbModeChauff = "ON"
+			sendCommand(BureauTempSwitch,"ON")
+        	sendCommand(SdbTempSwitch,"ON")
+        	
+    	    timerHeat = createTimer(now.plusMinutes(20)) [|
+        		sendCommand("XiaomiMiSmartHomeGateway_Color", "120,100,50") // HSL
+				logInfo("XiaomiSwitch", "SHORT_PRESSED B1 Middle")
+				timerHeat = null
+
+				 timerHeat = createTimer(now.plusMinutes(30)) [|
+					postUpdate(BureauRadModeSwitch, 2)	
+					BureauModeChauff = "CONF"
+					postUpdate(SdbRadModeSwitch, 3)	
+					SdbModeChauff = "AUTO"
+					sendCommand(BureauTempSwitch,"OFF")
+					sendCommand(SdbTempSwitch,"OFF")
+					sendCommand("XiaomiMiSmartHomeGateway_Brightness", "0")
+					logInfo("XiaomiSwitch", "SHORT_PRESSED B1 End")
+					timerHeat = null
+				]
+    		]
+        	
+	        	
+		    //sendCommand("XiaomiMiSmartHomeGateway_SoundVolume", "3")
+		    //sendCommand("XiaomiMiSmartHomeGateway_SoundSelector", "2")
+		    //Thread::sleep(10000)
+		    //sendCommand("XiaomiMiSmartHomeGateway_SoundSelector", "10000")
+		    //sendCommand("XiaomiMiSmartHomeGateway_SoundVolume", "0")
+
+        }
+        case "DOUBLE_PRESSED": 
+        {
+        	logInfo("XiaomiSwitch", "DOUBLE_PRESSED B1")
+			postUpdate(BureauRadModeSwitch, 2)	
+			BureauModeChauff = "CONF"
+			postUpdate(SdbRadModeSwitch, 3)	
+			SdbModeChauff = "AUTO"
+			sendCommand(BureauTempSwitch,"OFF")
+        	sendCommand(SdbTempSwitch,"OFF")
+        	sendCommand("XiaomiMiSmartHomeGateway_Brightness", "0")
+        	timerHeat = null
+        }
+        case "LONG_PRESSED": 
+        {
+        	logInfo("XiaomiSwitch", "LONG_PRESSED B1")
+			postUpdate(BureauRadModeSwitch, 2)	
+			BureauModeChauff = "CONF"
+			postUpdate(SdbRadModeSwitch, 3)	
+			SdbModeChauff = "AUTO"
+			sendCommand(BureauTempSwitch,"OFF")
+        	sendCommand(SdbTempSwitch,"OFF")
+        	sendCommand("XiaomiMiSmartHomeGateway_Brightness", "0")
+        	timerHeat = null
+        }
+    }
 end
 
-rule "Timer Demo"
-when
-	Item Light_GF_Corridor_Ceiling received command
-then
-	if(receivedCommand==ON) {
-		if(timer==null) {
-			// first ON command, so create a timer to turn the light off again
-			timer = createTimer(now.plusSeconds(10)) [|
-				sendCommand(Light_GF_Corridor_Ceiling, OFF)
-			]
-		} else {
-			// subsequent ON command, so reschedule the existing timer
-			timer.reschedule(now.plusSeconds(10))
-		}
-	} else if(receivedCommand==OFF) {
-		// remove any previously scheduled timer
-		if(timer!=null) {
-			timer.cancel
-			timer = null
-		}	
-	}
-end
-
-// Creates an item that stores the last update time of this item
-rule "Records last weather update time"
-when
-  Item Weather_Temperature received update
-then
-  postUpdate(Weather_LastUpdate, new DateTimeType())
-end
-
-// This rule will be used to test Scale transformation service
-rule "Compute humidex"
-when
-        Item Weather_Temperature changed or
-	Item Weather_Humidity changed
-then
-	var Number T = Weather_Temperature.state as DecimalType
-	var Number H = Weather_Humidity.state as DecimalType	
-	var Number x = 7.5 * T/(237.7 + T)
-	var Number e = 6.112 * Math::pow(10, x.doubleValue) * H/100
-	var Number humidex = T + (new Double(5) / new Double(9)) * (e - 10)
-	postUpdate(Weather_Humidex, humidex)
-end
-
-*/

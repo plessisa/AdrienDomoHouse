@@ -1,0 +1,227 @@
+sitemap default label="Appart Camille Adrien"
+{
+	Frame label="Salon" {
+	    Text item=SalonTempSensor valuecolor=[>20.5="orange",>19.5="green",<=15="blue"] {
+	    	Switch item=SalonTempSensorChartPeriod mappings=[0="Day", 1="Week", 2="Month"]
+    		Chart item=A_Salon_TempChart period=D refresh=30000 visibility=[SalonTempSensorChartPeriod==0, SalonTempSensorChartPeriod=="Uninitialized"] 
+    		Chart item=A_Salon_TempChart period=W refresh=30000 visibility=[SalonTempSensorChartPeriod==1]
+    		Chart item=A_Salon_TempChart period=M refresh=30000 visibility=[SalonTempSensorChartPeriod==2]
+	    }
+        Text item=SalonHumiSensor
+	    Text item=SalonMoveSensor {
+    		Chart label="Last day Temp" item=SalonMoveSensor period=d refresh=30000
+	    }
+	    Text item=SalonRadReport
+        Selection item=SalonRadModeSwitch mappings=[0="Arret",1="Marche",2="Confort",3="Auto"]
+	}
+    
+	Frame label="Chambre" {
+		Text item=XiaomiAqaraTHPSensor_Temperature2 valuecolor=[>20.5="orange",>19.5="green",<=15="blue"] {
+	    	Switch item=ChambreTempSensorChartPeriod mappings=[0="Day", 1="Week", 2="Month"]
+    		Chart item=A_Chambre_TempChart period=D refresh=30000 visibility=[ChambreTempSensorChartPeriod==0, ChambreTempSensorChartPeriod=="Uninitialized"] 
+    		Chart item=A_Chambre_TempChart period=W refresh=30000 visibility=[ChambreTempSensorChartPeriod==1]
+    		Chart item=A_Chambre_TempChart period=M refresh=30000 visibility=[ChambreTempSensorChartPeriod==2]
+	    }
+	    Text item=XiaomiAqaraTHPSensor_Humidity2
+	    Text item=ChambreRadReport
+        Selection item=ChambreRadModeSwitch mappings=[0="Arret",1="Marche",2="Confort",3="Auto"]                    
+	}
+	Frame label="Bureau" {
+		//Text item=BureauTempSensor valuecolor=[>20.5="orange",>19.5="green",<=15="blue"] {
+		Text item=XiaomiAqaraTHPSensor_Temperature valuecolor=[>20.5="orange",>19.5="green",<=15="blue"] {
+	    	Switch item=BureauTempSensorChartPeriod mappings=[0="Day", 1="Week", 2="Month"]
+    		Chart item=A_Bureau_TempChart period=D refresh=30000 visibility=[BureauTempSensorChartPeriod==0, BureauTempSensorChartPeriod=="Uninitialized"] 
+    		Chart item=A_Bureau_TempChart period=W refresh=30000 visibility=[BureauTempSensorChartPeriod==1]
+    		Chart item=A_Bureau_TempChart period=M refresh=30000 visibility=[BureauTempSensorChartPeriod==2]
+	    }
+	    Text item=XiaomiAqaraTHPSensor_Humidity 
+	    Text item=BureauRadReport
+        Selection item=BureauRadModeSwitch mappings=[0="Arret",1="Marche",2="Confort",3="Auto"]
+	}
+	Frame label="Salle de bain" {
+	    Text item=SdbRadReport
+        Selection item=SdbRadModeSwitch mappings=[0="Arret",1="Marche",3="Auto"]    
+	}
+	Frame label="Appart" {
+	    Text item=SdbBalReport
+        Selection item=SdbBalModeSwitch mappings=[0="Arret",1="Marche"]
+    }
+    Frame label="Alimentation" {
+        Switch item=ZWaveNode5FGWP102MeteredWallPlugSwitch_Switch
+        Text item=ZWaveNode5FGWP102MeteredWallPlugSwitch_ElectricMeterWatts
+        Text item=ZWaveNode5FGWP102MeteredWallPlugSwitch_ElectricMeterKWh
+        Switch item=ZWaveNode6FGWP102MeteredWallPlugSwitch_Switch
+        Text item=ZWaveNode6FGWP102MeteredWallPlugSwitch_ElectricMeterWatts
+        Text item=ZWaveNode6FGWP102MeteredWallPlugSwitch_ElectricMeterKWh
+	}
+	Frame label="Mode vacance" {
+
+		Text item=Alarm_MasterTime icon="present-off" visibility=[Alarm_Master==ON] {
+			Frame label="Master Alarm" {
+				Switch item=Alarm_Master
+				Text item=Alarm_MasterTime
+				Setpoint item=Alarm_MasterTimeMins minValue=0 maxValue=30 step=1
+			}
+		}
+		Text item=Alarm_MasterTime icon="present-on" visibility=[Alarm_Master==OFF] {
+			Frame label="Master Alarm" {
+				Switch item=Alarm_Master
+				Text item=Alarm_MasterTime
+				Setpoint item=Alarm_MasterTimeMins minValue=0 maxValue=30 step=1
+			}
+		}
+	}
+	
+	Frame label="Consomation" {
+        Text item=AppartConsoSensor  {
+	    	Switch item=ConsoSensorChartPeriod mappings=[0="Day", 1="Week", 2="Month"]
+    		Chart item=ConsoSensorChart period=D refresh=30000 visibility=[ConsoSensorChartPeriod==0, ConsoSensorChartPeriod=="Uninitialized"] 
+    		Chart item=ConsoSensorChart period=W refresh=30000 visibility=[ConsoSensorChartPeriod==1]
+    		Chart item=ConsoSensorChart period=M refresh=30000 visibility=[ConsoSensorChartPeriod==2]
+	    }
+        Text item=AppartHPSensor
+        Text item=AppartHCSensor
+        Text item=AppartHPConso  {
+	    	Switch item=AppartConsoChartPeriod mappings=[1="Week", 2="Month", 3="Year"]
+    		Chart item=ConsoChart period=W refresh=30000 visibility=[AppartConsoChartPeriod==1, AppartConsoChartPeriod=="Uninitialized"]
+    		Chart item=ConsoChart period=M refresh=30000 visibility=[AppartConsoChartPeriod==2]
+    		Chart item=ConsoChart period=Y refresh=30000 visibility=[AppartConsoChartPeriod==3]
+	    }
+        Text item=AppartHCConso
+	}
+	
+	Frame label="Meteo" {
+	    Text item=Weather_Temperatureopenweather valuecolor=[>25="orange",>15="green",>5="orange",<=5="blue"]{
+    		Chart label="Last day Meteo" item=TempChart period=d refresh=30000
+	    }
+		Text item=Weather_Humidity
+	}
+	
+	Frame label="System Status" {
+    	Text item=SalonLastUpdateSensor valuecolor=[SalonLastUpdateSensor>600="red", SalonLastUpdateSensor>240="orange"]
+    	Text item=ChambreLastUpdateSensor valuecolor=[ChambreLastUpdateSensor>600="red", ChambreLastUpdateSensor>240="orange"]
+    	Text item=BureauLastUpdateSensor valuecolor=[BureauLastUpdateSensor>600="red", BureauLastUpdateSensor>240="orange"]
+    	Text item=ConsoLastUpdateSensor valuecolor=[ConsoLastUpdateSensor>600="red", ConsoLastUpdateSensor>240="orange"]
+	    Text item=Weather_LastUpdateopenweather valuecolor=[Weather_LastUpdateopenweather>700="orange", Weather_LastUpdateopenweather>1400="red"]
+		Text label="Sensor Health" icon="settings" {
+			Frame label="Chambre" {
+				Default item=XiaomiAqaraTHPSensor_BatteryLevel2
+				Text item=XiaomiAqaraTHPSensor_LowBattery2
+			}
+			Frame label="Bureau" {
+				Default item=XiaomiAqaraTHPSensor_BatteryLevel
+				Text item=XiaomiAqaraTHPSensor_LowBattery
+			}
+			Frame label="Switch" {
+				Default item=XiaomiAqaraWirelessSwitch_BatteryLevel
+				Text item=XiaomiAqaraWirelessSwitch_LowBattery
+			}
+		}
+	}
+		
+	Frame label="Settings" {
+		Text label="Temperature Chauffage" icon="settings" {
+	        Setpoint item=TargetedTempSalon minValue=140 maxValue=250 step=5
+	        Setpoint item=TargetedTempChambre minValue=140 maxValue=250 step=5
+	        Setpoint item=TargetedTempBureau minValue=140 maxValue=250 step=5
+	    }
+		Text label="Horaire Chauffage" icon="settings" {
+			Frame label="Appart" {
+		        Setpoint item=AutoStartAM minValue=1 maxValue=23 step=1
+		        Setpoint item=AutoStopAM minValue=1 maxValue=23 step=1
+		        Setpoint item=AutoStartPM minValue=1 maxValue=23 step=1
+		        Setpoint item=AutoStopPM minValue=1 maxValue=23 step=1
+	        }
+		        Frame label="Salle de bain" {
+		        Setpoint item=SdbStartCamille minValue=1 maxValue=23 step=1
+		        Setpoint item=SdbStartAdrien minValue=1 maxValue=23 step=1
+		        Setpoint item=SdbLenght minValue=1 maxValue=23 step=1	        
+	        }
+	    }
+	    Text label="Gateway" icon="settings" {
+			Default item=XiaomiMiSmartHomeGateway_Brightness
+			Text item=XiaomiMiSmartHomeGateway_Brightness
+			Default item=XiaomiMiSmartHomeGateway_Color
+			Text item=XiaomiMiSmartHomeGateway_Color
+			Default item=XiaomiMiSmartHomeGateway_ColorTemperature
+			Text item=XiaomiMiSmartHomeGateway_ColorTemperature
+			Default item=XiaomiMiSmartHomeGateway_SoundVolume
+			Text item=XiaomiMiSmartHomeGateway_SoundVolume
+		}
+	}
+}
+
+/*
+ * 
+sitemap demo label="Demo House"
+{
+	Frame {
+		Group item=gFF label="First Floor" icon="firstfloor"
+		Group item=gGF label="Ground Floor" icon="groundfloor"
+		Group item=gC label="Cellar" icon="cellar"	
+		Group item=Outdoor icon="garden" 
+	}
+//	Frame label="Weather" {
+//		Text item=Weather_Temperature valuecolor=[Weather_LastUpdate=="Uninitialized"="lightgray",Weather_LastUpdate>90="lightgray",>25="orange",>15="green",>5="orange",<=5="blue"] {
+//			Frame {
+//				Text item=Weather_Temp_Max valuecolor=[>25="orange",>15="green",>5="orange",<=5="blue"]
+//				Text item=Weather_Temp_Min valuecolor=[>25="orange",>15="green",>5="orange",<=5="blue"]
+//				Text item=Weather_Humidity
+//				Text item=Weather_Humidex
+//				Text item=Weather_LastUpdate visibility=[Weather_LastUpdate>30] valuecolor=[Weather_LastUpdate>120="orange", Weather_LastUpdate>300="red"]
+//			}
+//			Frame {
+//				Switch item=Weather_Chart_Period label="Chart Period" mappings=[0="Hour", 1="Day", 2="Week"]
+//				Chart item=Weather_Chart period=h refresh=6000 visibility=[Weather_Chart_Period==0, Weather_Chart_Period=="Uninitialized"]
+//				Chart item=Weather_Chart period=D refresh=30000 visibility=[Weather_Chart_Period==1]
+//				Chart item=Weather_Chart period=W refresh=30000 visibility=[Weather_Chart_Period==2]
+//			}
+//		}
+//	}
+//	Frame label="Date" {
+//		Text item=Date
+//	}
+	Frame label="Demo" {
+		Text label="Group Demo" icon="firstfloor" {
+			Switch item=Lights mappings=[OFF="All Off"]
+			Group item=Heating
+			Group item=Windows
+			Text item=Temperature
+		}
+		Text label="Widget Overview" icon="chart" {
+			Frame label="Binary Widgets" {
+				Switch item=DemoSwitch label="Toggle Switch"
+				Switch item=DemoSwitch label="Button Switch" mappings=[ON="On"]
+			}
+			Frame label="Discrete Widgets" {
+				Selection item=Scene_General label="Scene Selection" mappings=[0=off, 1=TV, 2=Dinner, 3=Reading]
+				Switch item=Scene_General label="Scene" mappings=[1=TV, 2=Dinner, 3=Reading]
+				Setpoint item=Temperature_Setpoint minValue=16 maxValue=28 step=0.5
+			}
+			Frame label="Percent-based Widgets" {
+				Slider item=DimmedLight switchSupport
+				Colorpicker item=RGBLight icon="slider"
+				Switch item=DemoShutter
+				Slider item=DemoBlinds
+			}
+			Frame label="Map/Location" {
+				Mapview item=DemoLocation height=10
+			}
+			
+		}
+		Text label="Multimedia" icon="video" {
+			Frame label="Radio Control" {
+				Selection item=Radio_Station mappings=[0=off, 1=HR3, 2=SWR3, 3=FFH]
+				Slider item=Volume
+			}
+			Frame label="Multimedia Widgets" {
+				Image url="http://localhost:8080/images/splash-ipad-h.png" label="openHAB" {
+					Text label="http://www.openHAB.org" icon="icon"
+				}
+				Video url="http://demo.openhab.org/Hue.m4v"
+				Webview url="http://heise-online.mobi/" height=8
+			}
+		}
+	}
+}
+ */
